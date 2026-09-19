@@ -17,315 +17,113 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
     <style>
-/* ============================================================
-           ArduinoBlocks TEC4 — Rediseño moderno
-           Paleta: azul -> índigo -> violeta sobre sidebar oscura
-           ============================================================ */
-        :root {
-            --sidebar-width: 280px;
-            --grad-primary: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%);
-            --grad-sidebar: linear-gradient(195deg, #1e293b 0%, #0f172a 65%);
-            --text-strong: #0f172a;
-            --text-soft: #64748b;
-        }
-        body {
-            background-color: #f4f7fd;
-            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #1e293b;
-            background-image:
-                radial-gradient(1000px 520px at 85% -10%, rgba(139, 92, 246, 0.10), transparent 60%),
-                radial-gradient(900px 500px at -10% 110%, rgba(59, 130, 246, 0.10), transparent 60%),
-                linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
-            background-attachment: fixed;
-        }
-        /* Franja decorativa superior */
-        body::before {
-            content: "";
-            position: fixed;
-            top: 0; left: 0; right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
-            z-index: 1030;
-            pointer-events: none;
-        }
-        /* Scrollbars finos y modernos */
-        ::-webkit-scrollbar { width: 10px; height: 10px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 999px;
-            border: 2px solid transparent;
-            background-clip: content-box;
-        }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; background-clip: content-box; }
-        .sidebar::-webkit-scrollbar-thumb { background: #334155; background-clip: content-box; }
-        .sidebar::-webkit-scrollbar-thumb:hover { background: #475569; background-clip: content-box; }
-
-        /* ---------- Barra lateral oscura con brillos de color ---------- */
+        :root { --sidebar-width: 280px; }
+        body { background-color: #ffffff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .sidebar {
             width: var(--sidebar-width);
             height: 100vh;
             position: fixed;
             top: 0;
             left: 0;
-            background-color: #0f172a;
-            background-image:
-                radial-gradient(620px 320px at -15% -5%, rgba(99, 102, 241, 0.30), transparent 60%),
-                radial-gradient(520px 320px at 120% 110%, rgba(14, 165, 233, 0.20), transparent 60%),
-                var(--grad-sidebar);
-            border-right: 1px solid rgba(148, 163, 184, 0.15);
+            background: white;
+            border-right: 1px solid #dee2e6;
             z-index: 1000;
             padding: 1.5rem;
             overflow-y: auto;
         }
-        .sidebar h4 { color: #f8fafc !important; letter-spacing: -0.2px; }
-        .sidebar h4 .fa-microchip {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 34px;
-            height: 34px;
-            border-radius: 10px;
-            background-image: var(--grad-primary);
-            color: #fff !important;
-            font-size: 0.95rem;
-            vertical-align: middle;
-            box-shadow: 0 8px 18px -6px rgba(99, 102, 241, 0.65);
-        }
-        .sidebar a.badge {
-            background: rgba(255, 255, 255, 0.07) !important;
-            color: #cbd5e1 !important;
-            border: 1px solid rgba(255, 255, 255, 0.14) !important;
-            transition: all 0.25s ease;
-        }
-        .sidebar a.badge:hover {
-            background: rgba(255, 255, 255, 0.15) !important;
-            color: #fff !important;
-            transform: translateY(-1px);
-        }
-        .sidebar .form-label { color: #94a3b8 !important; }
-        .sidebar small.text-muted, #editModeHint { color: #94a3b8 !important; }
-
         .main-content {
             margin-left: var(--sidebar-width);
             padding: 2rem;
             position: relative;
         }
-
-        /* ---------- Botones de modo (navegación) ---------- */
+        .practice-card {
+            border: none;
+            border-radius: 15px;
+            transition: all 0.3s ease;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+        .practice-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+        }
         .btn-mode {
             text-align: left;
             margin-bottom: 0.5rem;
-            border-radius: 14px;
+            border-radius: 10px;
             font-weight: 600;
             padding: 12px 15px;
             width: 100%;
             border: 1px solid transparent;
-            transition: all 0.28s ease;
         }
-        .btn-mode.active {
-            background-image: var(--grad-primary);
-            color: #fff;
-            box-shadow: 0 12px 26px -10px rgba(99, 102, 241, 0.65);
-        }
-        .btn-mode.active:hover { filter: brightness(1.06); transform: translateY(-1px); }
-        .btn-mode:not(.active) {
-            background-color: rgba(255, 255, 255, 0.07);
-            color: #cbd5e1;
-            border-color: rgba(255, 255, 255, 0.12);
-        }
-        .btn-mode:not(.active):hover {
-            background-color: rgba(255, 255, 255, 0.14);
-            color: #fff;
-            transform: translateY(-1px);
-        }
-
-        .category-container { margin-left: 1rem; margin-bottom: 1.5rem; padding-left: 1rem; border-left: 2px solid rgba(255, 255, 255, 0.12); }
-        .cat-link { display: block; padding: 6px 0; color: #94a3b8; text-decoration: none; font-size: 0.9rem; transition: color 0.2s ease, transform 0.2s ease; }
-        .cat-link:hover { color: #e2e8f0; transform: translateX(3px); }
-        .cat-link.active { color: #93c5fd; font-weight: 600; }
-
-        /* ---------- Buscador ---------- */
-        .sidebar .input-group-text {
-            background: rgba(255, 255, 255, 0.07);
-            border-color: rgba(255, 255, 255, 0.13);
-            color: #94a3b8;
-        }
-        .sidebar .form-control {
-            background: rgba(255, 255, 255, 0.07);
-            border-color: rgba(255, 255, 255, 0.13);
-            color: #e2e8f0;
-        }
-        .sidebar .form-control::placeholder { color: #64748b; }
-        .sidebar .form-control:focus {
-            background: rgba(255, 255, 255, 0.10);
-            border-color: #818cf8;
-            color: #f1f5f9;
-            box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
-        }
-
-        /* ---------- Cabecera ---------- */
-        #viewTitle {
-            font-family: 'Poppins', 'Inter', sans-serif;
-            font-weight: 800;
-            letter-spacing: -0.4px;
-            font-size: clamp(1.7rem, 2.6vw, 2.3rem);
-            color: var(--text-strong);
-            background-image: linear-gradient(100deg, #0f172a 0%, #1d4ed8 45%, #7c3aed 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            display: inline-block;
-        }
-        #viewDesc { color: var(--text-soft); font-size: 1.02rem; }
-        #counter {
-            background-image: var(--grad-primary);
-            color: #fff;
-            border: 0;
-            font-weight: 600;
-            box-shadow: 0 8px 18px -8px rgba(99, 102, 241, 0.7);
-        }
-
-        /* ---------- Tarjetas de prácticas ---------- */
-        @keyframes cardIn {
-            from { opacity: 0; transform: translateY(16px) scale(0.98); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        .practice-card {
-            border: 1px solid #e2e8f0;
-            border-radius: 18px;
-            transition: transform 0.32s ease, box-shadow 0.32s ease, border-color 0.32s ease;
-            background: #fff;
-            box-shadow: 0 2px 12px -4px rgba(15, 23, 42, 0.08);
-            animation: cardIn 0.5s cubic-bezier(0.21, 0.7, 0.3, 1) backwards;
-        }
-        .practice-card:hover {
-            transform: translateY(-6px) scale(1.012);
-            border-color: #c7d2fe;
-            box-shadow: 0 26px 50px -18px rgba(99, 102, 241, 0.32);
-        }
-        /* Resplandor con el color de cada categoría (navegadores modernos) */
-        @supports (color: color-mix(in srgb, red, blue)) {
-            .practice-card[class*="cat-"]:hover {
-                border-color: color-mix(in srgb, var(--cat-accent) 40%, #ffffff);
-                box-shadow: 0 26px 50px -18px color-mix(in srgb, var(--cat-accent) 38%, transparent);
-            }
-        }
-        /* Aparición escalonada de las tarjetas */
-        #cardsGrid .col:nth-child(1) .practice-card { animation-delay: 0.02s; }
-        #cardsGrid .col:nth-child(2) .practice-card { animation-delay: 0.05s; }
-        #cardsGrid .col:nth-child(3) .practice-card { animation-delay: 0.08s; }
-        #cardsGrid .col:nth-child(4) .practice-card { animation-delay: 0.11s; }
-        #cardsGrid .col:nth-child(5) .practice-card { animation-delay: 0.14s; }
-        #cardsGrid .col:nth-child(6) .practice-card { animation-delay: 0.17s; }
-        #cardsGrid .col:nth-child(7) .practice-card { animation-delay: 0.20s; }
-        #cardsGrid .col:nth-child(8) .practice-card { animation-delay: 0.23s; }
-        #cardsGrid .col:nth-child(9) .practice-card { animation-delay: 0.26s; }
-        #cardsGrid .col:nth-child(10) .practice-card { animation-delay: 0.29s; }
-        #cardsGrid .col:nth-child(11) .practice-card { animation-delay: 0.32s; }
-        #cardsGrid .col:nth-child(12) .practice-card { animation-delay: 0.35s; }
-        .practice-card .card-title {
-            font-family: 'Poppins', 'Inter', sans-serif;
-            font-weight: 700;
-            color: var(--text-strong);
-        }
-
-        /* ---------- Identificador y etiquetas ---------- */
-        .badge-id {
-            background-image: linear-gradient(135deg, #1e293b, #334155);
-            color: #e2e8f0;
-            font-weight: 700;
-            font-size: 0.72rem;
-            border-radius: 8px;
-            letter-spacing: 0.4px;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-            padding: 0.35rem 0.55rem;
-        }
+        .btn-mode.active { background-color: #0d6efd; color: white; }
+        .btn-mode:not(.active) { background-color: #f8f9fa; color: #495057; }
+        .category-container { margin-left: 1rem; margin-bottom: 1.5rem; padding-left: 1rem; border-left: 2px solid #e9ecef; }
+        .cat-link { display: block; padding: 5px 0; color: #6c757d; text-decoration: none; font-size: 0.9rem; }
+        .cat-link:hover, .cat-link.active { color: #0d6efd; font-weight: 600; }
+        .badge-id { background: #e9ecef; color: #495057; font-weight: bold; font-size: 0.75rem; }
         .criterion-tag {
-            font-size: 0.68rem;
+            font-size: 0.65rem;
             margin-right: 4px;
             margin-bottom: 4px;
             display: inline-block;
-            border: 1px solid rgba(6, 182, 212, 0.45);
-            color: #0e7490;
-            background-image: linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(99, 102, 241, 0.12));
+            border: 1px solid #0dcaf0;
+            color: #0dcaf0;
+            background: rgba(13, 202, 240, 0.05);
             cursor: help;
-            border-radius: 999px;
-            padding: 0.3rem 0.65rem;
-            font-weight: 600;
-            transition: all 0.22s ease;
-        }
-        .criterion-tag:hover {
-            border-color: rgba(6, 182, 212, 0.9);
-            transform: translateY(-1px);
-            box-shadow: 0 6px 14px -6px rgba(6, 182, 212, 0.6);
-            color: #0e7490;
         }
         .criterion-tag .remove-criterion {
             cursor: pointer;
             margin-left: 5px;
             font-weight: bold;
-            color: #f43f5e;
-            transition: transform 0.15s ease, color 0.15s ease;
+            color: #dc3545;
         }
-        .criterion-tag .remove-criterion:hover { color: #e11d48; transform: scale(1.3); }
-
+        .criterion-tag .remove-criterion:hover { color: #a71d2a; }
         .popover {
             pointer-events: none;
             border-radius: 12px;
-            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.16);
-            border: 1px solid #22d3ee;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border: 1px solid #0dcaf0;
             max-width: 450px;
             font-size: 0.9rem;
         }
-        .popover-header { background-color: #0891b2; color: white; font-weight: bold; }
+        .popover-header { background-color: #0dcaf0; color: white; font-weight: bold; }
         .popover-body { white-space: normal; word-wrap: break-word; }
-
-        /* ---------- Botones de acción ---------- */
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; height: auto; position: relative; }
+            .main-content { margin-left: 0; padding: 1rem; }
+            /* Firebase status: posicion estatica, no absolute, debajo del titulo */
+            #firebaseStatusBar {
+                position: static !important;
+                display: block !important;
+                margin-bottom: 0.75rem;
+            }
+            #firebaseStatusText { font-size: 0.7rem !important; }
+            header h1 { font-size: 1.35rem; }
+            header .mb-5 { margin-bottom: 1.5rem !important; }
+        }
+        @media (min-width: 769px) {
+            /* En desktop, padding-right para que el titulo no choque con Firebase absolute */
+            .main-content header { padding-right: 210px; }
+        }
         .btn-add-criteria {
             font-size: 0.7rem;
-            padding: 0.28rem 0.65rem;
+            padding: 0.2rem 0.5rem;
             white-space: nowrap;
-            border-radius: 999px;
-            color: #fff !important;
-            border: 1px solid transparent;
-            background-image: linear-gradient(135deg, #10b981, #0d9488);
-            box-shadow: 0 8px 16px -8px rgba(13, 148, 136, 0.65);
-            transition: all 0.22s ease;
         }
-        .btn-add-criteria:hover, .btn-add-criteria:focus {
-            color: #fff !important;
-            transform: translateY(-1px);
-            filter: brightness(1.07);
-            box-shadow: 0 10px 20px -8px rgba(13, 148, 136, 0.75);
+        .criteria-checkbox-list {
+            max-height: 65vh;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
-        .practice-card .btn-outline-primary {
-            background-image: var(--grad-primary);
-            background-size: 160% 160%;
-            background-position: 0% 50%;
-            color: #fff;
-            border: 1px solid transparent;
-            border-radius: 999px;
-            box-shadow: 0 12px 24px -10px rgba(99, 102, 241, 0.6);
-            transition: all 0.3s ease;
+        #addCriteriaModal .modal-body {
+            overflow: visible !important;
         }
-        .practice-card .btn-outline-primary i { transition: transform 0.3s ease; }
-        .practice-card .btn-outline-primary:hover, .practice-card .btn-outline-primary:active {
-            background-position: 95% 50%;
-            color: #fff;
-            transform: translateY(-2px);
-            box-shadow: 0 16px 30px -10px rgba(99, 102, 241, 0.7);
+        #addCriteriaModal .form-check {
+            overflow: visible !important;
+            max-width: 100% !important;
         }
-        .practice-card .btn-outline-primary:hover i { transform: translate(2px, -2px); }
-
-        /* ---------- Modal ---------- */
-        .criteria-checkbox-list { max-height: 65vh; overflow-y: auto; overflow-x: hidden; }
-        #addCriteriaModal .modal-body { overflow: visible !important; }
-        #addCriteriaModal .form-check { overflow: visible !important; max-width: 100% !important; }
         #addCriteriaModal .form-check-label {
             white-space: normal !important;
             word-break: break-word !important;
@@ -334,16 +132,10 @@
             display: inline-block !important;
             max-width: calc(100% - 1.75rem) !important;
         }
-        #addCriteriaModal .form-check-label small { display: block !important; line-height: 1.5; white-space: normal !important; }
-        #addCriteriaModal .modal-content { border-radius: 20px; border: none; overflow: hidden; box-shadow: 0 30px 90px -20px rgba(15, 23, 42, 0.4); }
-        #addCriteriaModal .modal-header { background-image: var(--grad-primary); border-bottom: none; }
-        #addCriteriaModal .modal-footer { background: #f8fafc; border-top: 1px solid #eef2f7; }
-        #addCriteriaModal .form-check-input { accent-color: #6366f1; }
-
-        /* ---------- Indicador Firebase (cristal esmerilado) ---------- */
-        #firebaseStatus {
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
+        #addCriteriaModal .form-check-label small {
+            display: block !important;
+            line-height: 1.5;
+            white-space: normal !important;
         }
         @keyframes pulse-dot {
             0%, 100% { opacity: 1; }
@@ -355,10 +147,7 @@
         .firebase-disconnected #firebaseStatusText { color: #dc3545 !important; }
         .firebase-local #firebaseStatusDot { background: #fd7e14 !important; animation: none !important; }
         .firebase-local #firebaseStatusText { color: #b8680d !important; }
-        .firebase-syncing #firebaseStatusDot { background: #0d6efd !important; animation: pulse-dot 1s infinite !important; }
-        .firebase-syncing #firebaseStatusText { color: #0d6efd !important; }
-
-        /* ---------- Colores pastel por categoría ---------- */
+        /* Colores pastel por categoría */
         .cat-leds { --cat-border: #f5c6c6; --cat-accent: #d9534f; --cat-text: #a94442; }
         .cat-sensores { --cat-border: #b8daff; --cat-accent: #2a8fd4; --cat-text: #1a5f8e; }
         .cat-movimiento { --cat-border: #b1dfbb; --cat-accent: #3d8b4f; --cat-text: #2d6b3f; }
@@ -371,100 +160,13 @@
         .practice-card.cat-pantallas { border-top: 4px solid var(--cat-accent); }
         .practice-card.cat-proyectos { border-top: 4px solid var(--cat-accent); }
         .practice-card.cat-otros { border-top: 4px solid var(--cat-accent); }
-        .practice-card .cat-label {
-            font-size: 0.68rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
-            padding: 3px 10px;
-            border-radius: 8px;
-            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
-        }
+        .practice-card .cat-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 8px; border-radius: 6px; }
         .cat-leds .cat-label { background: var(--cat-border); color: var(--cat-text); }
         .cat-sensores .cat-label { background: var(--cat-border); color: var(--cat-text); }
         .cat-movimiento .cat-label { background: var(--cat-border); color: var(--cat-text); }
         .cat-pantallas .cat-label { background: var(--cat-border); color: var(--cat-text); }
         .cat-proyectos .cat-label { background: var(--cat-border); color: var(--cat-text); }
         .cat-otros .cat-label { background: var(--cat-border); color: var(--cat-text); }
-
-        /* ---------- Interruptor deslizante del modo edición ---------- */
-        .edit-mode-switch {
-            position: relative;
-            display: inline-block;
-            width: 52px;
-            height: 28px;
-            flex-shrink: 0;
-            cursor: pointer;
-        }
-        .edit-mode-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
-        .edit-mode-switch .slider {
-            position: absolute;
-            inset: 0;
-            background-color: #475569;
-            border-radius: 28px;
-            transition: background-color 0.3s ease, box-shadow 0.3s ease;
-        }
-        .edit-mode-switch .slider::before {
-            content: "";
-            position: absolute;
-            width: 22px;
-            height: 22px;
-            left: 3px;
-            top: 3px;
-            background-color: #ffffff;
-            border-radius: 50%;
-            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
-        }
-        .edit-mode-switch input:checked + .slider {
-            background-color: #3b82f6;
-            background-image: linear-gradient(135deg, #3b82f6, #06b6d4);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18), 0 6px 18px -4px rgba(59, 130, 246, 0.55);
-        }
-        .edit-mode-switch input:checked + .slider::before { transform: translateX(24px); }
-        .edit-mode-switch input:focus-visible + .slider { box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.45); }
-        .edit-mode-switch input:disabled + .slider { opacity: 0.5; cursor: not-allowed; }
-        .edit-mode-switch .slider .slider-icon {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 0.65rem;
-            font-weight: bold;
-            color: #ffffff;
-            transition: opacity 0.2s ease;
-        }
-        .edit-mode-switch .slider .slider-icon.on { left: 8px; opacity: 0; }
-        .edit-mode-switch .slider .slider-icon.off { right: 8px; opacity: 1; }
-        .edit-mode-switch input:checked + .slider .slider-icon.on { opacity: 1; }
-        .edit-mode-switch input:checked + .slider .slider-icon.off { opacity: 0; }
-
-        /* ---------- Responsive ---------- */
-        @media (max-width: 768px) {
-            .sidebar { width: 100%; height: auto; position: relative; }
-            .main-content { margin-left: 0; padding: 1rem; }
-            /* Firebase status: posicion estatica, no absolute, debajo del titulo */
-            #firebaseStatusBar {
-                position: static !important;
-                display: block !important;
-                margin-bottom: 0.75rem;
-            }
-            #firebaseStatusText { font-size: 0.7rem !important; }
-            header h1 { font-size: 1.5rem; }
-            header .mb-5 { margin-bottom: 1.5rem !important; }
-        }
-        @media (min-width: 769px) {
-            /* En desktop, padding-right para que el titulo no choque con Firebase absolute */
-            .main-content header { padding-right: 210px; }
-        }
-
-        /* ---------- Accesibilidad: reducir movimiento ---------- */
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
     </style>
 </head>
 <body>
@@ -495,23 +197,6 @@
         </div>
     </div>
 
-    <!-- Interruptor deslizante: activar/desactivar el modo edición -->
-    <div class="mt-3 pt-3 border-top">
-        <div class="d-flex align-items-center justify-content-between">
-            <span class="form-label small fw-bold text-muted text-uppercase mb-0" for="editModeToggle">
-                <i class="fas fa-pen-to-square me-1"></i>Modo edición
-            </span>
-            <label class="edit-mode-switch" for="editModeToggle" title="Activar o desactivar la edición de criterios">
-                <input type="checkbox" role="switch" id="editModeToggle" checked>
-                <span class="slider">
-                    <i class="fas fa-check slider-icon on"></i>
-                    <i class="fas fa-times slider-icon off"></i>
-                </span>
-            </label>
-        </div>
-        <small class="text-muted d-block mt-1" id="editModeHint">Permite añadir y quitar criterios de las prácticas.</small>
-    </div>
-
 </div>
 
 <div class="main-content">
@@ -529,7 +214,7 @@
             <p class="text-muted" id="viewDesc">Ordenadas según el programa oficial.</p>
             <div class="d-flex align-items-center gap-2">
                 <span class="badge bg-primary rounded-pill px-3" id="counter">Cargando...</span>
-                <small class="text-muted" id="headerHint"><i class="fas fa-info-circle"></i> Pasa el ratón por los criterios para ver su descripción.</small>
+                <small class="text-muted"><i class="fas fa-info-circle"></i> Pasa el ratón por los criterios para ver su descripción.</small>
             </div>
         </header>
         <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 row-cols-xxl-4 g-4" id="cardsGrid"></div>
@@ -581,11 +266,6 @@
     let firebaseDB = null;
     let useFirebase = false;
     let lastSyncHash = ''; // Para evitar re-renderizados duplicados
-    let isOnline = false;             // Conexión actual con Firebase
-    let pendingSync = false;          // Cambios locales pendientes de subir a la nube
-    let syncInFlightCount = 0;        // Subidas automáticas en curso
-    let lastLocalEditModeChange = 0;  // Marca de tiempo del último cambio local del interruptor
-    const APP_STATE_REF = 'appState'; // Nodo remoto compartido: { editModeEnabled, editModeUpdatedAt }
 
     // Carga Firebase de forma dinámica solo si está configurado (no bloquea la carga de la página)
     async function initFirebase() {
@@ -789,18 +469,11 @@
             container.style.background = 'rgba(25,135,84,0.08)';
             container.style.borderColor = 'rgba(25,135,84,0.25)';
             text.innerHTML = '<i class="fas fa-cloud me-1"></i> Firebase conectado';
-        } else if (status === 'syncing') {
-            container.classList.add('firebase-syncing');
-            container.style.background = 'rgba(13,110,253,0.08)';
-            container.style.borderColor = 'rgba(13,110,253,0.25)';
-            text.innerHTML = '<i class="fas fa-arrows-rotate me-1"></i> Sincronizando...';
         } else if (status === 'error') {
             container.classList.add('firebase-disconnected');
             container.style.background = 'rgba(220,53,69,0.08)';
             container.style.borderColor = 'rgba(220,53,69,0.25)';
-            text.innerHTML = pendingSync
-                ? '<i class="fas fa-cloud-arrow-up me-1"></i> Sin conexión · pendiente sincronizar'
-                : '<i class="fas fa-exclamation-triangle me-1"></i> Sin conexión';
+            text.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Sin conexión';
         } else if (status === 'not-configured') {
             container.classList.add('firebase-local');
             container.style.background = 'rgba(253,126,20,0.08)';
@@ -818,44 +491,25 @@
                 await firebaseDB.ref('.info/connected').once('value');
                 useFirebase = true;
                 updateFirebaseStatus('connected');
-                // Escuchar cambios de criterios en tiempo real desde Firebase
+                // Escuchar cambios en tiempo real desde Firebase
                 firebaseDB.ref('additionalCriteriaPerPractice').on('value', (snapshot) => {
                     const data = snapshot.val() || {};
                     const newHash = JSON.stringify(data);
-                    if (newHash === lastSyncHash) return; // Sin cambios nuevos
-                    // Si hay cambios locales pendientes de subir (o una subida en curso),
-                    // el estado remoto no debe pisarlos: se subirán automáticamente
-                    if (pendingSync || syncInFlightCount > 0) return;
-                    lastSyncHash = newHash;
-                    additionalCriteriaPerPractice = data;
-                    localStorage.setItem("additionalCriteriaPerPractice", newHash);
-                    if (window.__appInitialized) {
-                        renderPractices();
-                    }
-                });
-                // Escuchar el estado del modo edición (interruptor) en tiempo real
-                firebaseDB.ref(APP_STATE_REF).on('value', (snapshot) => {
-                    const state = snapshot.val() || {};
-                    const remoteEdit = state.editModeEnabled;
-                    const remoteTs = state.editModeUpdatedAt || 0;
-                    if (remoteEdit === undefined || remoteEdit === null) return; // Aún sin sincronizar
-                    // Aplicar solo si el cambio remoto es más reciente que el último cambio local
-                    if (remoteEdit !== editModeEnabled && remoteTs >= lastLocalEditModeChange) {
-                        setEditMode(remoteEdit, true); // true = el cambio viene de la nube (no reenviar)
-                    }
-                });
-                // Detectar desconexión y subir automáticamente los cambios pendientes al reconectar
-                firebaseDB.ref('.info/connected').on('value', (snap) => {
-                    isOnline = snap.val() === true;
-                    if (isOnline) {
-                        if (pendingSync) {
-                            updateFirebaseStatus('syncing');
-                            pushToFirebase(); // Subida automática de los cambios encolados
-                        } else {
-                            updateFirebaseStatus('connected');
+                    if (newHash !== lastSyncHash) {
+                        lastSyncHash = newHash;
+                        additionalCriteriaPerPractice = data;
+                        localStorage.setItem("additionalCriteriaPerPractice", newHash);
+                        if (window.__appInitialized) {
+                            renderPractices();
                         }
-                    } else if (useFirebase) {
+                    }
+                });
+                // Detectar desconexión
+                firebaseDB.ref('.info/connected').on('value', (snap) => {
+                    if (snap.val() === false && useFirebase) {
                         updateFirebaseStatus('error');
+                    } else if (snap.val() === true) {
+                        updateFirebaseStatus('connected');
                     }
                 });
             } catch (e) {
@@ -868,53 +522,15 @@
         }
     }
 
-    // --------------------------------------------------------------
-    // SINCRONIZACIÓN AUTOMÁTICA: sube cada cambio local a Firebase
-    // - Si no hay conexión, el cambio queda encolado (pendingSync) y
-    //   se sube solo en cuanto se restablece la conexión.
-    // --------------------------------------------------------------
-    function pushToFirebase() {
-        if (!useFirebase) {
-            // Firebase aún no está listo (o no está configurado):
-            // encolar por si la conexión llega más tarde
-            pendingSync = true;
-            return;
-        }
-        if (!isOnline) {
-            // Sin conexión: encolar el cambio y subirlo automáticamente al reconectar
-            pendingSync = true;
-            updateFirebaseStatus('error');
-            return;
-        }
-        pendingSync = false;
-        syncInFlightCount++;
-        updateFirebaseStatus('syncing');
-        Promise.all([
-            firebaseDB.ref('additionalCriteriaPerPractice').set(additionalCriteriaPerPractice),
-            firebaseDB.ref(APP_STATE_REF).set({
-                editModeEnabled: editModeEnabled,
-                editModeUpdatedAt: firebase.database.ServerValue.TIMESTAMP
-            })
-        ]).then(() => {
-            console.log("Cambios sincronizados automáticamente con Firebase.");
-        }).catch((err) => {
-            console.error("Error al sincronizar con Firebase:", err.message);
-            pendingSync = true; // Reintentar automáticamente en el próximo cambio o reconexión
-        }).finally(() => {
-            syncInFlightCount = Math.max(0, syncInFlightCount - 1);
-            if (syncInFlightCount === 0) {
-                updateFirebaseStatus(pendingSync ? 'error' : 'connected');
-            }
-        });
-    }
-
     function saveAdditionalCriteria() {
         const dataStr = JSON.stringify(additionalCriteriaPerPractice);
         lastSyncHash = dataStr;
         // Siempre guardar en localStorage como respaldo local
         localStorage.setItem("additionalCriteriaPerPractice", dataStr);
-        // Sincronización automática con Firebase tras cada cambio
-        pushToFirebase();
+        // Si Firebase está activo, sincronizar a la nube
+        if (useFirebase) {
+            firebaseDB.ref('additionalCriteriaPerPractice').set(additionalCriteriaPerPractice);
+        }
         renderPractices();
     }
 
@@ -930,7 +546,6 @@
 
     // Añade uno o varios criterios a una práctica
     function addCriteriaToPractice(practiceId, criteriaList) {
-        if (!editModeEnabled) return; // Modo edición desactivado: no permitir cambios
         if (!additionalCriteriaPerPractice[practiceId]) {
             additionalCriteriaPerPractice[practiceId] = [];
         }
@@ -955,7 +570,6 @@
 
     // Elimina un criterio (base o adicional) de una práctica
     function removeCriterionFromPractice(practiceId, criterionCode) {
-        if (!editModeEnabled) return; // Modo edición desactivado: no permitir cambios
         // Primero: si es un criterio adicional, quitarlo de la lista de extras
         if (additionalCriteriaPerPractice[practiceId]) {
             additionalCriteriaPerPractice[practiceId] = additionalCriteriaPerPractice[practiceId].filter(c => c !== criterionCode);
@@ -979,41 +593,6 @@
     let currentMode = 'class';
     let currentCategory = 'all';
     let currentPracticeIdForModal = null;
-    let editModeEnabled = true; // Estado del modo edición (interruptor deslizante)
-
-    // --------------------------------------------------------------
-    // MODO EDICIÓN: interruptor deslizante que activa/desactiva la edición
-    // --------------------------------------------------------------
-    function updateEditModeUI() {
-        const toggle = document.getElementById('editModeToggle');
-        if (toggle) toggle.checked = editModeEnabled;
-        const hint = document.getElementById('editModeHint');
-        if (hint) {
-            hint.innerHTML = editModeEnabled
-                ? 'Permite añadir y quitar criterios de las prácticas.'
-                : 'Criterios protegidos: solo lectura.';
-        }
-        const headerHint = document.getElementById('headerHint');
-        if (headerHint) {
-            headerHint.innerHTML = editModeEnabled
-                ? '<i class="fas fa-pen-to-square"></i> Modo edición activo: puedes añadir o quitar criterios.'
-                : '<i class="fas fa-lock"></i> Modo edición desactivado: los criterios están protegidos (solo lectura).';
-        }
-    }
-
-    function setEditMode(enabled, fromRemote = false) {
-        editModeEnabled = enabled;
-        if (!fromRemote) lastLocalEditModeChange = Date.now(); // Marca de tiempo del cambio local
-        // Persistir el estado para mantenerlo entre sesiones
-        try { localStorage.setItem("editModeEnabled", enabled ? "true" : "false"); } catch (e) { /* localStorage no disponible */ }
-        updateEditModeUI();
-        renderPractices(); // Vuelve a pintar las tarjetas con o sin controles de edición
-        // Sincronización automática con Firebase tras cada cambio
-        // (excepto cuando el cambio proviene de la nube, para evitar bucles)
-        if (!fromRemote) {
-            pushToFirebase();
-        }
-    }
 
     // --------------------------------------------------------------
     // FUNCIONES DE RENDERIZADO
@@ -1084,8 +663,7 @@
             const practiceCrit = getPracticeCriteria(p);
             // Determinar qué criterios de los 13 NO están asignados
             const missingCriteria = ALL_CRITERIA_CODES.filter(c => !practiceCrit.includes(c));
-            // El botón de añadir solo aparece si el modo edición está activo
-            const showAddButton = editModeEnabled && missingCriteria.length > 0;
+            const showAddButton = missingCriteria.length > 0;
 
             const cardCol = document.createElement('div');
             cardCol.className = 'col';
@@ -1099,8 +677,7 @@
                         <h5 class="card-title fw-bold text-dark mb-3">${p.title}</h5>
                         <div class="mb-3 d-flex flex-wrap align-items-center gap-1" id="criteria-container-${p.id}">
                             ${practiceCrit.map(c => {
-                                // La X de eliminar solo se muestra con el modo edición activo
-                                const removeBtn = editModeEnabled ? `<span class="remove-criterion" data-practice="${p.id}" data-criterion="${c}">❌</span>` : '';
+                                const removeBtn = `<span class="remove-criterion" data-practice="${p.id}" data-criterion="${c}">❌</span>`;
                                 return `<span class="badge criterion-tag rounded-pill px-2 py-1" data-bs-toggle="popover" data-bs-trigger="hover" title="${c}" data-bs-content="${criteriaDescriptions[c] || 'Descripción no disponible.'}">
                                             ${c} ${removeBtn}
                                         </span>`;
@@ -1192,20 +769,8 @@
     // --------------------------------------------------------------
     window.onload = () => {
         loadStorage();
-
-        // Restaurar el estado del modo edición (interruptor) antes del primer renderizado
-        let savedEditMode = null;
-        try { savedEditMode = localStorage.getItem("editModeEnabled"); } catch (e) { /* localStorage no disponible */ }
-        editModeEnabled = (savedEditMode === null) ? true : (savedEditMode === "true");
-        updateEditModeUI();
-
         changeMode('class');
         window.__appInitialized = true;
-
-        // Interruptor deslizante del modo edición
-        document.getElementById('editModeToggle').addEventListener('change', (e) => {
-            setEditMode(e.target.checked);
-        });
 
         // Confirmar añadir criterios desde el modal
         document.getElementById('confirmAddCriteria').addEventListener('click', () => {
