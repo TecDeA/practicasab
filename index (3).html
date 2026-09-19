@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="Gestor de prácticas ArduinoBlocks con criterios de evaluación TEC4 sincronizados en tiempo real.">
+    <meta name="theme-color" content="#0d6efd">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="ArduinoBlocks">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+    <link rel="manifest" href="./manifest.json">
+
+    <title>Prácticas ArduinoBlocks TEC4</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+/* ============================================================
+           ArduinoBlocks TEC4 — Rediseño moderno
+           Paleta: azul -> índigo -> violeta sobre sidebar oscura
+           ============================================================ */
+        :root {
+            --sidebar-width: 280px;
+            --grad-primary: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%);
+            --grad-sidebar: linear-gradient(195deg, #1e293b 0%, #0f172a 65%);
+            --text-strong: #0f172a;
+            --text-soft: #64748b;
+        }
+        body {
+            background-color: #f4f7fd;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #1e293b;
+            background-image:
+                radial-gradient(1000px 520px at 85% -10%, rgba(139, 92, 246, 0.10), transparent 60%),
+                radial-gradient(900px 500px at -10% 110%, rgba(59, 130, 246, 0.10), transparent 60%),
+                linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+            background-attachment: fixed;
+        }
+        /* Franja decorativa superior */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
+            z-index: 1030;
+            pointer-events: none;
+        }
+        /* Scrollbars finos y modernos */
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 999px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; background-clip: content-box; }
+        .sidebar::-webkit-scrollbar-thumb { background: #334155; background-clip: content-box; }
+        .sidebar::-webkit-scrollbar-thumb:hover { background: #475569; background-clip: content-box; }
+
+        /* ---------- Barra lateral oscura con brillos de color ---------- */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: #0f172a;
+            background-image:
+                radial-gradient(620px 320px at -15% -5%, rgba(99, 102, 241, 0.30), transparent 60%),
+                radial-gradient(520px 320px at 120% 110%, rgba(14, 165, 233, 0.20), transparent 60%),
+                var(--grad-sidebar);
+            border-right: 1px solid rgba(148, 163, 184, 0.15);
+            z-index: 1000;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+        .sidebar h4 { color: #f8fafc !important; letter-spacing: -0.2px; }
+        .sidebar h4 .fa-microchip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background-image: var(--grad-primary);
+            color: #fff !important;
+            font-size: 0.95rem;
+            vertical-align: middle;
+            box-shadow: 0 8px 18px -6px rgba(99, 102, 241, 0.65);
+        }
+        .sidebar a.badge {
+            background: rgba(255, 255, 255, 0.07) !important;
+            color: #cbd5e1 !important;
+            border: 1px solid rgba(255, 255, 255, 0.14) !important;
+            transition: all 0.25s ease;
+        }
+        .sidebar a.badge:hover {
+            background: rgba(255, 255, 255, 0.15) !important;
+            color: #fff !important;
+            transform: translateY(-1px);
+        }
+        .sidebar .form-label { color: #94a3b8 !important; }
+        .sidebar small.text-muted, #editModeHint { color: #94a3b8 !important; }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 2rem;
+            position: relative;
+        }
+
+        /* ---------- Botones de modo (navegación) ---------- */
+        .btn-mode {
+            text-align: left;
+            margin-bottom: 0.5rem;
+            border-radius: 14px;
+            font-weight: 600;
+            padding: 12px 15px;
+            width: 100%;
+            border: 1px solid transparent;
+            transition: all 0.28s ease;
+        }
+        .btn-mode.active {
+            background-image: var(--grad-primary);
+            color: #fff;
+            box-shadow: 0 12px 26px -10px rgba(99, 102, 241, 0.65);
+        }
+        .btn-mode.active:hover { filter: brightness(1.06); transform: translateY(-1px); }
+        .btn-mode:not(.active) {
+            background-color: rgba(255, 255, 255, 0.07);
+            color: #cbd5e1;
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+        .btn-mode:not(.active):hover {
+            background-color: rgba(255, 255, 255, 0.14);
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        .category-container { margin-left: 1rem; margin-bottom: 1.5rem; padding-left: 1rem; border-left: 2px solid rgba(255, 255, 255, 0.12); }
+        .cat-link { display: block; padding: 6px 0; color: #94a3b8; text-decoration: none; font-size: 0.9rem; transition: color 0.2s ease, transform 0.2s ease; }
+        .cat-link:hover { color: #e2e8f0; transform: translateX(3px); }
+        .cat-link.active { color: #93c5fd; font-weight: 600; }
+
+        /* ---------- Buscador ---------- */
+        .sidebar .input-group-text {
+            background: rgba(255, 255, 255, 0.07);
+            border-color: rgba(255, 255, 255, 0.13);
+            color: #94a3b8;
+        }
+        .sidebar .form-control {
+            background: rgba(255, 255, 255, 0.07);
+            border-color: rgba(255, 255, 255, 0.13);
+            color: #e2e8f0;
+        }
+        .sidebar .form-control::placeholder { color: #64748b; }
+        .sidebar .form-control:focus {
+            background: rgba(255, 255, 255, 0.10);
+            border-color: #818cf8;
+            color: #f1f5f9;
+            box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
+        }
+
+        /* ---------- Cabecera ---------- */
+        #viewTitle {
+            font-family: 'Poppins', 'Inter', sans-serif;
+            font-weight: 800;
+            letter-spacing: -0.4px;
+            font-size: clamp(1.7rem, 2.6vw, 2.3rem);
+            color: var(--text-strong);
+            background-image: linear-gradient(100deg, #0f172a 0%, #1d4ed8 45%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-block;
+        }
+        #viewDesc { color: var(--text-soft); font-size: 1.02rem; }
+        #counter {
+            background-image: var(--grad-primary);
+            color: #fff;
+            border: 0;
+            font-weight: 600;
+            box-shadow: 0 8px 18px -8px rgba(99, 102, 241, 0.7);
+        }
+
+        /* ---------- Tarjetas de prácticas ---------- */
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(16px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .practice-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 18px;
+            transition: transform 0.32s ease, box-shadow 0.32s ease, border-color 0.32s ease;
+            background: #fff;
+            box-shadow: 0 2px 12px -4px rgba(15, 23, 42, 0.08);
+            animation: cardIn 0.5s cubic-bezier(0.21, 0.7, 0.3, 1) backwards;
+        }
+        .practice-card:hover {
+            transform: translateY(-6px) scale(1.012);
+            border-color: #c7d2fe;
+            box-shadow: 0 26px 50px -18px rgba(99, 102, 241, 0.32);
+        }
+        /* Resplandor con el color de cada categoría (navegadores modernos) */
+        @supports (color: color-mix(in srgb, red, blue)) {
+            .practice-card[class*="cat-"]:hover {
+                border-color: color-mix(in srgb, var(--cat-accent) 40%, #ffffff);
+                box-shadow: 0 26px 50px -18px color-mix(in srgb, var(--cat-accent) 38%, transparent);
+            }
+        }
+        /* Aparición escalonada de las tarjetas */
+        #cardsGrid .col:nth-child(1) .practice-card { animation-delay: 0.02s; }
+        #cardsGrid .col:nth-child(2) .practice-card { animation-delay: 0.05s; }
+        #cardsGrid .col:nth-child(3) .practice-card { animation-delay: 0.08s; }
+        #cardsGrid .col:nth-child(4) .practice-card { animation-delay: 0.11s; }
+        #cardsGrid .col:nth-child(5) .practice-card { animation-delay: 0.14s; }
+        #cardsGrid .col:nth-child(6) .practice-card { animation-delay: 0.17s; }
+        #cardsGrid .col:nth-child(7) .practice-card { animation-delay: 0.20s; }
+        #cardsGrid .col:nth-child(8) .practice-card { animation-delay: 0.23s; }
+        #cardsGrid .col:nth-child(9) .practice-card { animation-delay: 0.26s; }
+        #cardsGrid .col:nth-child(10) .practice-card { animation-delay: 0.29s; }
+        #cardsGrid .col:nth-child(11) .practice-card { animation-delay: 0.32s; }
+        #cardsGrid .col:nth-child(12) .practice-card { animation-delay: 0.35s; }
+        .practice-card .card-title {
+            font-family: 'Poppins', 'Inter', sans-serif;
+            font-weight: 700;
+            color: var(--text-strong);
+        }
+
+        /* ---------- Identificador y etiquetas ---------- */
+        .badge-id {
+            background-image: linear-gradient(135deg, #1e293b, #334155);
+            color: #e2e8f0;
+            font-weight: 700;
+            font-size: 0.72rem;
+            border-radius: 8px;
+            letter-spacing: 0.4px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            padding: 0.35rem 0.55rem;
+        }
+        .criterion-tag {
+            font-size: 0.68rem;
+            margin-right: 4px;
+            margin-bottom: 4px;
+            display: inline-block;
+            border: 1px solid rgba(6, 182, 212, 0.45);
+            color: #0e7490;
+            background-image: linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(99, 102, 241, 0.12));
+            cursor: help;
+            border-radius: 999px;
+            padding: 0.3rem 0.65rem;
+            font-weight: 600;
+            transition: all 0.22s ease;
+        }
+        .criterion-tag:hover {
+            border-color: rgba(6, 182, 212, 0.9);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px -6px rgba(6, 182, 212, 0.6);
+            color: #0e7490;
+        }
+        .criterion-tag .remove-criterion {
+            cursor: pointer;
+            margin-left: 5px;
+            font-weight: bold;
+            color: #f43f5e;
+            transition: transform 0.15s ease, color 0.15s ease;
+        }
+        .criterion-tag .remove-criterion:hover { color: #e11d48; transform: scale(1.3); }
+
+        .popover {
+            pointer-events: none;
+            border-radius: 12px;
+            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.16);
+            border: 1px solid #22d3ee;
+            max-width: 450px;
+            font-size: 0.9rem;
+        }
+        .popover-header { background-color: #0891b2; color: white; font-weight: bold; }
+        .popover-body { white-space: normal; word-wrap: break-word; }
+
+        /* ---------- Botones de acción ---------- */
+        .btn-add-criteria {
+            font-size: 0.7rem;
+            padding: 0.28rem 0.65rem;
+            white-space: nowrap;
+            border-radius: 999px;
+            color: #fff !important;
+            border: 1px solid transparent;
+            background-image: linear-gradient(135deg, #10b981, #0d9488);
+            box-shadow: 0 8px 16px -8px rgba(13, 148, 136, 0.65);
+            transition: all 0.22s ease;
+        }
+        .btn-add-criteria:hover, .btn-add-criteria:focus {
+            color: #fff !important;
+            transform: translateY(-1px);
+            filter: brightness(1.07);
+            box-shadow: 0 10px 20px -8px rgba(13, 148, 136, 0.75);
+        }
+        .practice-card .btn-outline-primary {
+            background-image: var(--grad-primary);
+            background-size: 160% 160%;
+            background-position: 0% 50%;
+            color: #fff;
+            border: 1px solid transparent;
+            border-radius: 999px;
+            box-shadow: 0 12px 24px -10px rgba(99, 102, 241, 0.6);
+            transition: all 0.3s ease;
+        }
+        .practice-card .btn-outline-primary i { transition: transform 0.3s ease; }
+        .practice-card .btn-outline-primary:hover, .practice-card .btn-outline-primary:active {
+            background-position: 95% 50%;
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 16px 30px -10px rgba(99, 102, 241, 0.7);
+        }
+        .practice-card .btn-outline-primary:hover i { transform: translate(2px, -2px); }
+
+        /* ---------- Modal ---------- */
+        .criteria-checkbox-list { max-height: 65vh; overflow-y: auto; overflow-x: hidden; }
+        #addCriteriaModal .modal-body { overflow: visible !important; }
+        #addCriteriaModal .form-check { overflow: visible !important; max-width: 100% !important; }
+        #addCriteriaModal .form-check-label {
+            white-space: normal !important;
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+            overflow: visible !important;
+            display: inline-block !important;
+            max-width: calc(100% - 1.75rem) !important;
+        }
+        #addCriteriaModal .form-check-label small { display: block !important; line-height: 1.5; white-space: normal !important; }
+        #addCriteriaModal .modal-content { border-radius: 20px; border: none; overflow: hidden; box-shadow: 0 30px 90px -20px rgba(15, 23, 42, 0.4); }
+        #addCriteriaModal .modal-header { background-image: var(--grad-primary); border-bottom: none; }
+        #addCriteriaModal .modal-footer { background: #f8fafc; border-top: 1px solid #eef2f7; }
+        #addCriteriaModal .form-check-input { accent-color: #6366f1; }
+
+        /* ---------- Indicador Firebase (cristal esmerilado) ---------- */
+        #firebaseStatus {
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .firebase-connected #firebaseStatusDot { background: #198754 !important; animation: none !important; }
+        .firebase-connected #firebaseStatusText { color: #198754 !important; }
+        .firebase-disconnected #firebaseStatusDot { background: #dc3545 !important; animation: none !important; }
+        .firebase-disconnected #firebaseStatusText { color: #dc3545 !important; }
+        .firebase-local #firebaseStatusDot { background: #fd7e14 !important; animation: none !important; }
+        .firebase-local #firebaseStatusText { color: #b8680d !important; }
+        .firebase-syncing #firebaseStatusDot { background: #0d6efd !important; animation: pulse-dot 1s infinite !important; }
+        .firebase-syncing #firebaseStatusText { color: #0d6efd !important; }
+
+        /* ---------- Colores pastel por categoría ---------- */
+        .cat-leds { --cat-border: #f5c6c6; --cat-accent: #d9534f; --cat-text: #a94442; }
+        .cat-sensores { --cat-border: #b8daff; --cat-accent: #2a8fd4; --cat-text: #1a5f8e; }
+        .cat-movimiento { --cat-border: #b1dfbb; --cat-accent: #3d8b4f; --cat-text: #2d6b3f; }
+        .cat-pantallas { --cat-border: #f5d5b0; --cat-accent: #d4850a; --cat-text: #a56808; }
+        .cat-proyectos { --cat-border: #d0c0e8; --cat-accent: #7b4faa; --cat-text: #5e3a82; }
+        .cat-otros { --cat-border: #b0e8e8; --cat-accent: #1a9e9e; --cat-text: #147575; }
+        .practice-card.cat-leds { border-top: 4px solid var(--cat-accent); }
+        .practice-card.cat-sensores { border-top: 4px solid var(--cat-accent); }
+        .practice-card.cat-movimiento { border-top: 4px solid var(--cat-accent); }
+        .practice-card.cat-pantallas { border-top: 4px solid var(--cat-accent); }
+        .practice-card.cat-proyectos { border-top: 4px solid var(--cat-accent); }
+        .practice-card.cat-otros { border-top: 4px solid var(--cat-accent); }
+        .practice-card .cat-label {
+            font-size: 0.68rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            padding: 3px 10px;
+            border-radius: 8px;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+        }
+        .cat-leds .cat-label { background: var(--cat-border); color: var(--cat-text); }
+        .cat-sensores .cat-label { background: var(--cat-border); color: var(--cat-text); }
+        .cat-movimiento .cat-label { background: var(--cat-border); color: var(--cat-text); }
+        .cat-pantallas .cat-label { background: var(--cat-border); color: var(--cat-text); }
+        .cat-proyectos .cat-label { background: var(--cat-border); color: var(--cat-text); }
+        .cat-otros .cat-label { background: var(--cat-border); color: var(--cat-text); }
+
+        /* ---------- Interruptor deslizante del modo edición ---------- */
+        .edit-mode-switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 28px;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+        .edit-mode-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+        .edit-mode-switch .slider {
+            position: absolute;
+            inset: 0;
+            background-color: #475569;
+            border-radius: 28px;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .edit-mode-switch .slider::before {
+            content: "";
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            left: 3px;
+            top: 3px;
+            background-color: #ffffff;
+            border-radius: 50%;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+        }
+        .edit-mode-switch input:checked + .slider {
+            background-color: #3b82f6;
+            background-image: linear-gradient(135deg, #3b82f6, #06b6d4);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18), 0 6px 18px -4px rgba(59, 130, 246, 0.55);
+        }
+        .edit-mode-switch input:checked + .slider::before { transform: translateX(24px); }
+        .edit-mode-switch input:focus-visible + .slider { box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.45); }
+        .edit-mode-switch input:disabled + .slider { opacity: 0.5; cursor: not-allowed; }
+        .edit-mode-switch .slider .slider-icon {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.65rem;
+            font-weight: bold;
+            color: #ffffff;
+            transition: opacity 0.2s ease;
+        }
+        .edit-mode-switch .slider .slider-icon.on { left: 8px; opacity: 0; }
+        .edit-mode-switch .slider .slider-icon.off { right: 8px; opacity: 1; }
+        .edit-mode-switch input:checked + .slider .slider-icon.on { opacity: 1; }
+        .edit-mode-switch input:checked + .slider .slider-icon.off { opacity: 0; }
+
+        /* ---------- Responsive ---------- */
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; height: auto; position: relative; }
+            .main-content { margin-left: 0; padding: 1rem; }
+            /* Firebase status: posicion estatica, no absolute, debajo del titulo */
+            #firebaseStatusBar {
+                position: static !important;
+                display: block !important;
+                margin-bottom: 0.75rem;
+            }
+            #firebaseStatusText { font-size: 0.7rem !important; }
+            header h1 { font-size: 1.5rem; }
+            header .mb-5 { margin-bottom: 1.5rem !important; }
+        }
+        @media (min-width: 769px) {
+            /* En desktop, padding-right para que el titulo no choque con Firebase absolute */
+            .main-content header { padding-right: 210px; }
+        }
+
+        /* ---------- Accesibilidad: reducir movimiento ---------- */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="text-center mb-4">
+        <h4 class="fw-bold text-dark mb-1"><i class="fas fa-microchip text-primary me-2"></i>ArduinoBlocks</h4>
+        <a href="https://practicasarduinoblocks.blogspot.com/" target="_blank" class="badge bg-light text-muted border text-decoration-none" style="font-size:0.75rem;"><i class="fas fa-blog me-1"></i>Blog Prácticas de Arduinoblocks</a>
+    </div>
+    
+    <div id="navigation-modes">
+        <button class="btn btn-mode active" id="mode-class-btn" onclick="changeMode('class')">
+            <i class="fas fa-user-graduate me-2"></i> Prácticas de 4º ESO
+        </button>
+        <div id="categories-class" class="category-container"></div>
+
+        <button class="btn btn-mode" id="mode-all-btn" onclick="changeMode('all')">
+            <i class="fas fa-layer-group me-2"></i> Banco de Recursos
+        </button>
+        <div id="categories-all" class="category-container" style="display:none;"></div>
+    </div>
+
+    <div class="mt-3 pt-3 border-top">
+        <label class="form-label small fw-bold text-muted text-uppercase">Buscador</label>
+        <div class="input-group input-group-sm">
+            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+            <input type="text" id="searchBox" class="form-control border-start-0 ps-0" placeholder="Ej: LDR, BT, P01...">
+        </div>
+    </div>
+
+    <!-- Interruptor deslizante: activar/desactivar el modo edición -->
+    <div class="mt-3 pt-3 border-top">
+        <div class="d-flex align-items-center justify-content-between">
+            <span class="form-label small fw-bold text-muted text-uppercase mb-0" for="editModeToggle">
+                <i class="fas fa-pen-to-square me-1"></i>Modo edición
+            </span>
+            <label class="edit-mode-switch" for="editModeToggle" title="Activar o desactivar la edición de criterios">
+                <input type="checkbox" role="switch" id="editModeToggle" checked>
+                <span class="slider">
+                    <i class="fas fa-check slider-icon on"></i>
+                    <i class="fas fa-times slider-icon off"></i>
+                </span>
+            </label>
+        </div>
+        <small class="text-muted d-block mt-1" id="editModeHint">Permite añadir y quitar criterios de las prácticas.</small>
+    </div>
+
+</div>
+
+<div class="main-content">
+    <div class="container-fluid">
+        <!-- Indicador Firebase arriba a la derecha -->
+        <div id="firebaseStatusBar" class="position-absolute d-none d-md-block" style="top:0.75rem;right:1rem;z-index:10;">
+            <div id="firebaseStatus" class="d-flex align-items-center gap-2 small rounded-3 px-3 py-2" style="background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.3);">
+                <span id="firebaseStatusDot" class="rounded-circle d-inline-block" style="width:8px;height:8px;background:#ffc107;animation:pulse-dot 1.5s infinite;"></span>
+                <span id="firebaseStatusText" class="fw-semibold" style="color:#b8860b;font-size:0.75rem;">Conectando...</span>
+            </div>
+        </div>
+
+        <header class="mb-5">
+            <h1 class="fw-bold" id="viewTitle">Prácticas de 4º ESO</h1>
+            <p class="text-muted" id="viewDesc">Ordenadas según el programa oficial.</p>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-primary rounded-pill px-3" id="counter">Cargando...</span>
+                <small class="text-muted" id="headerHint"><i class="fas fa-info-circle"></i> Pasa el ratón por los criterios para ver su descripción.</small>
+            </div>
+        </header>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 row-cols-xxl-4 g-4" id="cardsGrid"></div>
+    </div>
+</div>
+
+<!-- MODAL para añadir criterios extra -->
+<div class="modal fade" id="addCriteriaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Añadir criterios de evaluación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Selecciona los criterios que quieres añadir a esta práctica (múltiples):</p>
+                <div id="criteriaChecklist" class="criteria-checkbox-list"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="confirmAddCriteria">Añadir seleccionados</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --------------------------------------------------------------
+    // CONFIGURACIÓN FIREBASE — Sincronización entre navegadores
+    // --------------------------------------------------------------
+    // Instrucciones:
+    //   1. Ve a https://console.firebase.google.com y crea un proyecto
+    //   2. En Build > Realtime Database, crea una base de datos (modo test)
+    //   3. En Project Settings > General > Your apps > Web app, registra la app
+    //   4. Copia el objeto firebaseConfig y pégalo aquí
+    //   5. En Reglas de la base de datos, pon: { "rules": { ".read": true, ".write": true } }
+    //
+    // Si no configuras Firebase, la app usará localStorage local (sin sincronizar).
+    // --------------------------------------------------------------
+        const firebaseConfig = {
+          apiKey: "AIzaSyCYLbcE_zVQpZdolgZww18uGvLhdOLo-wM",
+          authDomain: "arduinoblocks01.firebaseapp.com",
+          databaseURL: "https://arduinoblocks01-default-rtdb.europe-west1.firebasedatabase.app",
+          projectId: "arduinoblocks01",
+          storageBucket: "arduinoblocks01.firebasestorage.app",
+          messagingSenderId: "584506334188",
+          appId: "1:584506334188:web:42851bdb11037c01cf7ec9"
+        };
+    let firebaseDB = null;
+    let useFirebase = false;
+    let lastSyncHash = ''; // Para evitar re-renderizados duplicados
+    let isOnline = false;             // Conexión actual con Firebase
+    let pendingSync = false;          // Cambios locales pendientes de subir a la nube
+    let syncInFlightCount = 0;        // Subidas automáticas en curso
+    let lastLocalEditModeChange = 0;  // Marca de tiempo del último cambio local del interruptor
+    const APP_STATE_REF = 'appState'; // Nodo remoto compartido: { editModeEnabled, editModeUpdatedAt }
+
+    // Carga Firebase de forma dinámica solo si está configurado (no bloquea la carga de la página)
+    async function initFirebase() {
+        const firebaseNeedsInit = firebaseConfig.apiKey !== "TU_API_KEY_AQUI";
+        if (!firebaseNeedsInit) {
+            console.warn("Firebase no configurado. Se usará localStorage (sin sincronización entre dispositivos).");
+            return false;
+        }
+        try {
+            // Cargar SDKs de Firebase dinámicamente
+            await Promise.all([
+                loadScript("https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"),
+                loadScript("https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js")
+            ]);
+            firebase.initializeApp(firebaseConfig);
+            firebaseDB = firebase.database();
+            console.log("Firebase inicializado. Sincronización entre dispositivos activada.");
+            return true;
+        } catch (e) {
+            console.error("Error al inicializar Firebase:", e.message);
+            return false;
+        }
+    }
+
+    function loadScript(src) {
+        return new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = src;
+            s.onload = resolve;
+            s.onerror = () => reject(new Error("No se pudo cargar: " + src));
+            document.head.appendChild(s);
+        });
+    }
+
+    // --------------------------------------------------------------
+    // CRITERIOS COMPLETOS (13 según currículo TEC4)
+    // --------------------------------------------------------------
+    const criteriaDescriptions = {
+        "TEC.4.1.1": "Idear y planificar soluciones tecnológicas emprendedoras que generen un valor para la comunidad, a partir de la observación y el análisis del entorno más cercano, estudiando sus necesidades, requisitos y posibilidades de mejora.",
+        "TEC.4.1.2": "Aplicar con iniciativa estrategias colaborativas de gestión de proyectos con una perspectiva interdisciplinar y siguiendo un proceso iterativo de validación, desde la fase de ideación hasta la difusión de la solución.",
+                "TEC.4.1.3": "Abordar la gestión del proyecto de forma creativa, aplicando estrategias y técnicas colaborativas adecuadas, así como métodos de investigación en la ideación de soluciones lo más eficientes, accesibles e innovadoras posibles.", 
+        "TEC.4.2.1": "Analizar el diseño de un producto que dé respuesta a una necesidad planteada, evaluando su demanda, evolución y previsión de fin de ciclo de vida con un criterio ético, responsable e inclusivo.",
+        "TEC.4.2.2": "Fabricar productos y soluciones tecnológicas, aplicando herramientas de diseño asistido, técnicas de elaboración manual, mecánica y digital y utilizando los materiales y recursos mecánicos, eléctricos, electrónicos y digitales adecuados.",
+        "TEC.4.3.1": "Intercambiar información y fomentar el trabajo en equipo de manera asertiva, empleando las herramientas digitales adecuadas junto con el vocabulario técnico, símbolos y esquemas de sistemas tecnológicos apropiados.",
+        "TEC.4.3.2": "Presentar y difundir las propuestas o soluciones tecnológicas de manera efectiva, empleando la entonación, expresión, gestión del tiempo y adaptación adecuada del discurso, así como un lenguaje inclusivo y no sexista.",
+        "TEC.4.4.1": "Diseñar, construir, controlar y simular sistemas automáticos programables y robots que sean capaces de realizar tareas de forma autónoma, aplicando conocimientos de mecánica, electrónica, neumática y componentes de los sistemas de control, así como otros conocimientos interdisciplinares.",
+        "TEC.4.4.2": "Integrar en las máquinas y sistemas tecnológicos aplicaciones informáticas y tecnologías digitales emergentes de control y simulación como el internet de las cosas, el big data y la inteligencia artificial con sentido crítico y ético.",
+        "TEC.4.5.1": "Resolver tareas propuestas de manera eficiente mediante el uso y configuración de diferentes aplicaciones y herramientas digitales, aplicando conocimientos interdisciplinares con autonomía.",
+        "TEC.4.6.1": "Hacer un uso responsable de la tecnología, mediante el análisis y aplicación de criterios de sostenibilidad y accesibilidad en la selección de materiales y en el diseño de estos, así como en los procesos de fabricación de productos tecnológicos, minimizando el impacto negativo en la sociedad y en el planeta.",
+        "TEC.4.6.2": "Analizar los beneficios que, en el cuidado del entorno, aportan la arquitectura bioclimática y el ecotransporte, valorando la contribución de las tecnologías al desarrollo sostenible.",
+                "TEC.4.6.3": "Identificar y valorar la repercusión y los beneficios del desarrollo de proyectos tecnológicos de carácter social, por medio de comunidades abiertas, acciones de voluntariado o proyectos de servicio a la comunidad."
+                };
+
+    // Lista ordenada de todos los códigos de criterio
+    const ALL_CRITERIA_CODES = Object.keys(criteriaDescriptions);  // 13 elementos
+
+    const classPracticesIds = [
+        "P01_L","P02A_L","P02B_L","P02C_L","P02D_L","P02E_L","P02F_L","P02G_L","P02H_L","P02I_L","P03_L","P04_L",
+        "P05_I","P06_I","P07_I","P08_MK","P09_SC","P10_LDR","P11_LDR","P12_LDR","P13_LDR","P14_POT","P15_POT","P16_POT",
+        "P17_ULTRA","P18_ULTRA","P19_ULTRA","P20_SERVO","P21A_SERVO","P21B_SERVO","P22_SERVO","P23_SERVO","P24_SERVO",
+        "P25_MOT","P26A_MOT","P26B_MOT","P27A_MOT","P27B_MOT","P30_JT","P28_LCD","P29_LCD","PROY01","PROY05","R1"
+    ];
+
+    const practicesData = [
+        // LEDS
+        { id: "P01_L", title: "Conexión de un Led", category: "leds", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P01_L.%20Conexi%C3%B3n%20de%20un%20Led" },
+        { id: "P02A_L", title: "Encendido de 3 Leds", category: "leds", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P02A_L.%20Encendido%20de%203%20Leds" },
+        { id: "P02B_L", title: "Secuencia con Leds", category: "leds", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P02B_L.%20Secuencia%20con%20Leds" },
+        { id: "P02C_L", title: "Secuencia con Leds", category: "leds", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P02C_L.%20Secuencia%20con%20Leds" },
+        { id: "P02D_L", title: "Secuencia con Leds", category: "leds", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P02D_L.%20Secuencia%20con%20Leds" },
+        { id: "P02E_L", title: "Secuencia con Leds Func", category: "leds", criteria: ["TEC.4.5.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P02E_L.%20Secuencia%20con%20Leds%20Func" },
+        { id: "P02F_L", title: "Secuencia con Leds Vbles", category: "leds", criteria: ["TEC.4.5.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P02F_L.%20Secuencia%20con%20Leds%20Vbles" },
+        { id: "P02G_L", title: "Secuencia con Leds brillo", category: "leds", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P02G_L.%20Secuencia%20con%20Leds%20brillo" },
+        { id: "P02H_L", title: "Secuencia con leds", category: "leds", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P02H_L.%20Secuencia%20con%20leds" },
+        { id: "P02I_L", title: "Secuencia con leds", category: "leds", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P02I_L.%20Secuencia%20con%20leds" },
+        { id: "P03_L", title: "Semáforo F1 con sonido", category: "leds", criteria: ["TEC.4.2.2"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P03_L.%20Sem%C3%A1foro%20F1%20con%20sonido" },
+        { id: "P04_L", title: "Código Morse con 1 Led", category: "leds", criteria: ["TEC.4.3.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P04_L.%20C%C3%B3digo%20Morse%20con%201%20Led" },
+        // SENSORES
+        { id: "P05_I", title: "Encendido al pulsar interruptor", category: "sensores", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P05_I.%20Encendido%20de%201%20Led%20al%20pulsar%20interruptor" },
+        { id: "P06_I", title: "Control 3 Leds con 2 interruptores", category: "sensores", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P06_I.%20control%20de%203%20Leds%20con%202%20interruptores" },
+        { id: "P07_I", title: "Contador de pulsaciones", category: "sensores", criteria: ["TEC.4.5.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P07_I.%20Contador%20de%20pulsaciones%20del%20interruptor" },
+        { id: "P08_MK", title: "Conexiones Makey", category: "sensores", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P08_MK.%20Conexiones%20Makey" },
+        { id: "P09_SC", title: "Obtenemos el color de un objeto", category: "sensores", criteria: ["TEC.4.4.2"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P09_SC.%20Obtenemos%20el%20color%20de%20un%20objeto" },
+        { id: "P10_LDR", title: "Leer valor sensor LDR", category: "sensores", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P10_LDR.%20Leer%20el%20valor%20de%20un%20sensor%20anal%C3%B3gico%20LDR" },
+        { id: "P11_LDR", title: "Control Led con LDR", category: "sensores", criteria: ["TEC.4.6.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P11_LDR.%20Control%20de%20Led%20con%20sensor%20anal%C3%B3gico%20LDR" },
+        { id: "P12_LDR", title: "Encendido progresivo nivel Leds", category: "sensores", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P12_LDR.%20Encendido%20progresivo%20de%20leds%20seg%C3%BAn%20nivel%20de%20Leds" },
+        { id: "P13_LDR", title: "Barrera Láser con LDR", category: "sensores", criteria: ["TEC.4.2.2"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P13_LDR.%20Barrera%20L%C3%A1ser%20con%20LDR" },
+        { id: "P14_POT", title: "Variar intensidad POT", category: "sensores", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P14_POT.%20Variar%20intensidad%20a%20tramos%20de%20Led%20con%20potenci%C3%B3metro" },
+        { id: "P15_POT", title: "Ajustar brillo automático POT", category: "sensores", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P15_POT.%20Ajustar%20brillo%20autom%C3%A1tico%20de%20led%20con%20potenci%C3%B3metro" },
+        { id: "P16_POT", title: "Control 5 leds con POT", category: "sensores", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P16_POT.%20control%205%20leds%20con%20potenci%C3%B3metro" },
+        { id: "P17_ULTRA", title: "Leer distancia ultrasonidos", category: "sensores", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P17_ULTRA.%20Leer%20distancia%20con%20ultrasonidos" },
+        { id: "P18_ULTRA", title: "Ultrasonidos y LCD", category: "pantallas", criteria: ["TEC.4.3.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P18_ULTRA.%20Leer%20distancia%20con%20ultrasonidos%20y%20LCD" },
+        { id: "P19_ULTRA", title: "Sensor aparcamiento completo", category: "sensores", criteria: ["TEC.4.1.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P19_ULTRA.%20Sensor%20de%20aparcamiento%20con%20pantalla%20luz%20y%20sonido" },
+        // MOVIMIENTO
+        { id: "P20_SERVO", title: "Giro básico servomotor", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P20_SERVO.%20Giro%20basico%20de%20un%20servomotor" },
+        { id: "P21A_SERVO", title: "Servo a tramos", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P21A_SERVO.%20Control%20del%20giro%20de%20un%20servo%20a%20tramos" },
+        { id: "P21B_SERVO", title: "Servo a tramos", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P21B_SERVO.%20Control%20del%20giro%20de%20un%20servo%20a%20tramos" },
+        { id: "P22_SERVO", title: "Servo con 2 pulsadores", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P22_SERVO.%20Control%20del%20giro%20de%20un%20servo%20con%202%20pulsadores" },
+        { id: "P23_SERVO", title: "Servo con potenciómetro", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P23_SERVO.%20Control%20de%20un%20servo%20con%20potenciometro" },
+        { id: "P24_SERVO", title: "Movimiento de 2 servos", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P24_SERVO.%20Movimiento%20de%202%20servos" },
+        { id: "P25_MOT", title: "Avance motor con interruptor", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P25_MOT.%20Control%20avance%20de%201%20motor%20con%20interruptor" },
+        { id: "P26A_MOT", title: "Avance y paro motor", category: "movimiento", criteria: ["TEC.4.2.2"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P26A_MOT.%20Control%20avance%20y%20paro%20de%201%20motor%20con%20interruptor" },
+        { id: "P26B_MOT", title: "Avance y paro motor", category: "movimiento", criteria: ["TEC.4.2.2"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P26B_MOT.%20Control%20avance%20y%20paro%20de%201%20motor%20con%20interruptor" },
+        { id: "P27A_MOT", title: "Control velocidad motor", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P27A_MOT.%20Control%20de%20velocidad%20de%20un%20motor" },
+        { id: "P27B_MOT", title: "Control velocidad motor", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P27B_MOT.%20Control%20de%20velocidad%20de%20un%20motor" },
+        { id: "P30_JT", title: "Velocidad con Joystick", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P30_JT.%20Control%20de%20la%20velocidad%20de%20un%20motor%20con%20Joystick" },
+        // PANTALLAS
+        { id: "P28_LCD", title: "Mensajes en pantalla LCD", category: "pantallas", criteria: ["TEC.4.3.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P28_LCD.%20Mostramos%20mensajes%20en%20pantalla%20LCD" },
+        { id: "P29_LCD", title: "Mensaje desplazable LCD", category: "pantallas", criteria: ["TEC.4.3.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P29_LCD.%20Mensaje%20que%20se%20desplaza%20por%20la%20pantalla%20LCD" },
+        { id: "P31_MX", title: "Puntos en matriz led 8x8", category: "pantallas", criteria: ["TEC.4.5.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P31_MX.%20Encendido%20de%20puntos%20en%20matriz%20led%208x8" },
+        { id: "P32_MX", title: "Símbolos en matriz led 8x8", category: "pantallas", criteria: ["TEC.4.3.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P32_MX.%20Mostrar%20simbolos%20o%20dibujos%20en%20matriz%20led%208x8" },
+        { id: "P33_MX", title: "Nombre desplazable en matriz", category: "pantallas", criteria: ["TEC.4.3.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P33_MX.%20Nuestro%20nombre%20desplaz%C3%A1ndose%20en%20matriz%20led%208x8" },
+        { id: "P34_MX", title: "Cuadrados en aumento matriz", category: "pantallas", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P34_MX.%20Mostrar%20cuadrados%20en%20aumento%20en%20matriz%20led%208x8" },
+        { id: "P35_MX", title: "Flechas Matriz con Joystick", category: "pantallas", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P35_MX.%20Mostrar%20flechas%20en%20matriz%20Led%20con%20control%20de%20Joystick" },
+        { id: "P36_C", title: "Juego adivina el número", category: "otros", criteria: ["TEC.4.5.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P36_C.%20Juego%20adivina%20el%20n%C3%BAmero" },
+        { id: "P37_OLED", title: "Dibujos en pantalla OLED", category: "pantallas", criteria: ["TEC.4.3.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P37_OLED.%20Mostramos%20dibujos%20creados%20por%20nosotros" },
+        // SONIDO
+        { id: "P38_Z", title: "Escala musical", category: "otros", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P38_Z.%20Escala%20musical" },
+        { id: "P39_Z", title: "Elegir melodías al pulsar", category: "otros", criteria: ["TEC.4.5.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P39_Z.%20Elegir%20melod%C3%ADas%20seg%C3%BAn%20pulsemos" },
+        // BLUETOOTH
+        { id: "P40_BT", title: "Control Led con Bluetooth", category: "otros", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P40_BT.%20Control%20de%20un%20Led%20con%20Bluetooth" },
+        { id: "P41_BT", title: "Nivel de luz Led con BT", category: "otros", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P41_BT.%20Control%20del%20nivel%20de%20luz%20de%20led%20con%20bluetooth" },
+        { id: "P42_BT", title: "Movimientos Robot con BT", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P42_BT.%20Movimientos%20b%C3%A1sicos%20Robot%20con%20bluetooth" },
+        { id: "P43_BT", title: "Mejorar control APP Robot", category: "otros", criteria: ["TEC.4.5.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P43_BT.%20Mejoramos%20el%20control%20del%20robot%20modificando%20la%20APP" },
+        { id: "P44_BT", title: "Velocidad motor con BT", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P44_BT.%20Control%20de%20velocidad%20de%20un%20motor%20con%20BT.%20Mismo%20sentido" },
+        // NEOPIXEL
+        { id: "P45_Nx", title: "Neopixel Semáforo F1", category: "leds", criteria: ["TEC.4.2.2"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P45_Nx.%20Neopixel%20Sem%C3%A1foro%20F1" },
+        { id: "P46_Nx", title: "Neopixel Coche Fantástico", category: "leds", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P46_Nx.%20Neopixel%20Coche%20Fant%C3%A1stico" },
+        { id: "P47_Nx", title: "Neopixel Subir Intensidad", category: "leds", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P47_Nx.%20Neopixel%20Subir%20Intensidad" },
+        { id: "P48_Nx", title: "Neopixel 'Nos Chocamos'", category: "leds", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P48_Nx.%20Neopixel%20%22Nos%20Chocamos%22" },
+        // MOTOR PASO A PASO
+        { id: "P49_PASO", title: "Giro motor paso a paso", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P49_PASO.%20Giro%20de%20motor%20paso%20a%20paso" },
+        { id: "P50_PASO", title: "Control motor pulsadores", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P50_PASO.%20Control%20del%20giro%20de%20motor%20con%20pulsadores" },
+        { id: "P51_ENCOD", title: "Motor paso a paso con encoder", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P51_ENCOD.%20Control%20del%20giro%20de%20motor%20paso%20a%20paso%20con%20encoder" },
+        { id: "P52_RPM", title: "Obtener velocidad de motor", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P52_RPM.%20Obtener%20velocidad%20de%20un%20motor" },
+        // PROYECTOS
+        { id: "PROY01", title: "Tren luminoso y sonoro", category: "proyectos", criteria: ["TEC.4.1.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/PROY01.%20Tren%20luminoso%20y%20sonoro" },
+        { id: "PROY02", title: "Atracción feria balanceo", category: "proyectos", criteria: ["TEC.4.6.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/PROY02.%20Atracci%C3%B3n%20de%20feria%20con%20balanceo." },
+        { id: "PROY03", title: "Dispensador de gel", category: "proyectos", criteria: ["TEC.4.6.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/PROY03.%20Dispensador%20de%20gel" },
+        { id: "PROY04", title: "El átomo", category: "proyectos", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/PROY04.%20El%20%C3%A1tomo" },
+        { id: "PROY05", title: "Parking automático", category: "proyectos", criteria: ["TEC.4.6.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/PROY05.%20Parking%20autom%C3%A1tico" },
+        { id: "PROY06", title: "Medidor de altura", category: "proyectos", criteria: ["TEC.4.1.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/PROY06.%20Medidor%20de%20altura" },
+        { id: "PROY07", title: "Parque encendido automático", category: "proyectos", criteria: ["TEC.4.6.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/PROY07.%20Parque%20encendido%20autom%C3%A1tico" },
+        { id: "PROY08", title: "Tiovivo", category: "proyectos", criteria: ["TEC.4.2.2"], url: "https://practicasarduinoblocks.blogspot.com/search/label/PROY08.%20Tiovivo" },
+        { id: "PROY09", title: "Invernadero", category: "proyectos", criteria: ["TEC.4.6.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/PROY09.%20Invernadero" },
+        { id: "PROY10", title: "Paso a nivel con barrera", category: "proyectos", criteria: ["TEC.4.2.2"], url: "https://practicasarduinoblocks.blogspot.com/search/label/PROY10.%20Paso%20a%20nivel%20con%20barrera" },
+        { id: "PROY11", title: "Puerta cochera con mando", category: "proyectos", criteria: ["TEC.4.6.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/PROY11.%20Puerta%20cochera%20con%20mando" },
+        { id: "PROY12", title: "Caja fuerte", category: "proyectos", criteria: ["TEC.4.1.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/PROY12.%20Caja%20fuerte" },
+        { id: "PROY13", title: "Grúa", category: "proyectos", criteria: ["TEC.4.2.2"], url: "https://practicasarduinoblocks.blogspot.com/search/label/PROY13.%20Gr%C3%BAa" },
+        { id: "PROY14", title: "Laberinto", category: "proyectos", criteria: ["TEC.4.1.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/PROY14.%20Laberinto" },
+        { id: "PROY15", title: "Clasificador color", category: "proyectos", criteria: ["TEC.4.6.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/PROY15.%20Clasificador%20color" },
+        { id: "PROY16", title: "Dispensador bolas", category: "proyectos", criteria: ["TEC.4.6.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/PROY16.%20Dispensador%20bolas" },
+        { id: "PROY17", title: "Coche todoterreno", category: "proyectos", criteria: ["TEC.4.1.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/PROY17.%20Coche%20todoterreno" },
+        { id: "PROY18", title: "Máquina agua", category: "proyectos", criteria: ["TEC.4.6.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/PROY18.%20M%C3%A1quina%20agua" },
+        { id: "PROY19", title: "Golosinas", category: "proyectos", criteria: ["TEC.4.6.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/PROY19.%20Golosinas" },
+        { id: "PROY20", title: "Plinko", category: "proyectos", criteria: ["TEC.4.1.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/PROY20.%20Plinko" },
+        // ROBOTS
+        { id: "R1", title: "Robot Básico", category: "proyectos", criteria: ["TEC.4.1.2"], url: "https://practicasarduinoblocks.blogspot.com/search/label/R1.%20B%C3%A1sico" },
+        { id: "R2", title: "Robot Evita-Caídas", category: "proyectos", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/R2.%20Robot%20Evita-Ca%C3%ADdas" },
+        { id: "R3", title: "Robot miedoso", category: "proyectos", criteria: ["TEC.4.1.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/R3.%20Robot%20miedoso" },
+        { id: "R4", title: "Robot Sigue-Líneas", category: "proyectos", criteria: ["TEC.4.6.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/R4.%20Robot%20Sigue-L%C3%ADneas" },
+        { id: "R5", title: "Robot esquiva obstáculos", category: "proyectos", criteria: ["TEC.4.1.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/R5.%20Robot%20esquiva%20obst%C3%A1culos" },
+        { id: "R6", title: "Robot Sigue-Luz", category: "proyectos", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/R6.%20Robot%20Sigue-Luz" }
+    ];
+
+    const categoriesMap = {
+        leds: "💡 Leds / Neopixel",
+        sensores: "🌡️ Sensores",
+        movimiento: "⚙️ Motores / Servos",
+        pantallas: "📺 Pantallas / Matrices",
+        proyectos: "🚀 Proyectos / Robots",
+        otros: "🛠️ Especiales / BT"
+    };
+
+    // --------------------------------------------------------------
+    // PERSISTENCIA: criterios adicionales por práctica
+    // --------------------------------------------------------------
+    let additionalCriteriaPerPractice = {}; // { "P01_L": ["TEC.4.5.1", ...] }
+
+    function loadStorage() {
+        // Cargar datos desde localStorage siempre de forma inmediata
+        try {
+            const stored = localStorage.getItem("additionalCriteriaPerPractice");
+            if (stored) additionalCriteriaPerPractice = JSON.parse(stored);
+            else additionalCriteriaPerPractice = {};
+        } catch (e) {
+            console.error("Error al leer localStorage, se reinician los datos:", e.message);
+            additionalCriteriaPerPractice = {};
+            localStorage.removeItem("additionalCriteriaPerPractice");
+        }
+        lastSyncHash = JSON.stringify(additionalCriteriaPerPractice);
+    }
+
+    // Actualiza el indicador visual de estado de Firebase
+    function updateFirebaseStatus(status) {
+        const container = document.getElementById('firebaseStatus');
+        const text = document.getElementById('firebaseStatusText');
+        container.className = 'd-flex align-items-center gap-2 small rounded-3 px-3 py-2';
+        if (status === 'connected') {
+            container.classList.add('firebase-connected');
+            container.style.background = 'rgba(25,135,84,0.08)';
+            container.style.borderColor = 'rgba(25,135,84,0.25)';
+            text.innerHTML = '<i class="fas fa-cloud me-1"></i> Firebase conectado';
+        } else if (status === 'syncing') {
+            container.classList.add('firebase-syncing');
+            container.style.background = 'rgba(13,110,253,0.08)';
+            container.style.borderColor = 'rgba(13,110,253,0.25)';
+            text.innerHTML = '<i class="fas fa-arrows-rotate me-1"></i> Sincronizando...';
+        } else if (status === 'error') {
+            container.classList.add('firebase-disconnected');
+            container.style.background = 'rgba(220,53,69,0.08)';
+            container.style.borderColor = 'rgba(220,53,69,0.25)';
+            text.innerHTML = pendingSync
+                ? '<i class="fas fa-cloud-arrow-up me-1"></i> Sin conexión · pendiente sincronizar'
+                : '<i class="fas fa-exclamation-triangle me-1"></i> Sin conexión';
+        } else if (status === 'not-configured') {
+            container.classList.add('firebase-local');
+            container.style.background = 'rgba(253,126,20,0.08)';
+            container.style.borderColor = 'rgba(253,126,20,0.25)';
+            text.innerHTML = '<i class="fas fa-hdd me-1"></i> Modo local';
+        }
+    }
+
+    // Conecta Firebase en segundo plano (no bloquea la UI)
+    async function connectFirebaseSync() {
+        const ok = await initFirebase();
+        if (ok) {
+            try {
+                // Verificar que la conexión funciona leyendo un dato
+                await firebaseDB.ref('.info/connected').once('value');
+                useFirebase = true;
+                updateFirebaseStatus('connected');
+                // Escuchar cambios de criterios en tiempo real desde Firebase
+                firebaseDB.ref('additionalCriteriaPerPractice').on('value', (snapshot) => {
+                    const data = snapshot.val() || {};
+                    const newHash = JSON.stringify(data);
+                    if (newHash === lastSyncHash) return; // Sin cambios nuevos
+                    // Si hay cambios locales pendientes de subir (o una subida en curso),
+                    // el estado remoto no debe pisarlos: se subirán automáticamente
+                    if (pendingSync || syncInFlightCount > 0) return;
+                    lastSyncHash = newHash;
+                    additionalCriteriaPerPractice = data;
+                    localStorage.setItem("additionalCriteriaPerPractice", newHash);
+                    if (window.__appInitialized) {
+                        renderPractices();
+                    }
+                });
+                // Escuchar el estado del modo edición (interruptor) en tiempo real
+                firebaseDB.ref(APP_STATE_REF).on('value', (snapshot) => {
+                    const state = snapshot.val() || {};
+                    const remoteEdit = state.editModeEnabled;
+                    const remoteTs = state.editModeUpdatedAt || 0;
+                    if (remoteEdit === undefined || remoteEdit === null) return; // Aún sin sincronizar
+                    // Aplicar solo si el cambio remoto es más reciente que el último cambio local
+                    if (remoteEdit !== editModeEnabled && remoteTs >= lastLocalEditModeChange) {
+                        setEditMode(remoteEdit, true); // true = el cambio viene de la nube (no reenviar)
+                    }
+                });
+                // Detectar desconexión y subir automáticamente los cambios pendientes al reconectar
+                firebaseDB.ref('.info/connected').on('value', (snap) => {
+                    isOnline = snap.val() === true;
+                    if (isOnline) {
+                        if (pendingSync) {
+                            updateFirebaseStatus('syncing');
+                            pushToFirebase(); // Subida automática de los cambios encolados
+                        } else {
+                            updateFirebaseStatus('connected');
+                        }
+                    } else if (useFirebase) {
+                        updateFirebaseStatus('error');
+                    }
+                });
+            } catch (e) {
+                console.error("Error al verificar conexión Firebase:", e.message);
+                useFirebase = false;
+                updateFirebaseStatus('error');
+            }
+        } else {
+            updateFirebaseStatus('not-configured');
+        }
+    }
+
+    // --------------------------------------------------------------
+    // SINCRONIZACIÓN AUTOMÁTICA: sube cada cambio local a Firebase
+    // - Si no hay conexión, el cambio queda encolado (pendingSync) y
+    //   se sube solo en cuanto se restablece la conexión.
+    // --------------------------------------------------------------
+    function pushToFirebase() {
+        if (!useFirebase) {
+            // Firebase aún no está listo (o no está configurado):
+            // encolar por si la conexión llega más tarde
+            pendingSync = true;
+            return;
+        }
+        if (!isOnline) {
+            // Sin conexión: encolar el cambio y subirlo automáticamente al reconectar
+            pendingSync = true;
+            updateFirebaseStatus('error');
+            return;
+        }
+        pendingSync = false;
+        syncInFlightCount++;
+        updateFirebaseStatus('syncing');
+        Promise.all([
+            firebaseDB.ref('additionalCriteriaPerPractice').set(additionalCriteriaPerPractice),
+            firebaseDB.ref(APP_STATE_REF).set({
+                editModeEnabled: editModeEnabled,
+                editModeUpdatedAt: firebase.database.ServerValue.TIMESTAMP
+            })
+        ]).then(() => {
+            console.log("Cambios sincronizados automáticamente con Firebase.");
+        }).catch((err) => {
+            console.error("Error al sincronizar con Firebase:", err.message);
+            pendingSync = true; // Reintentar automáticamente en el próximo cambio o reconexión
+        }).finally(() => {
+            syncInFlightCount = Math.max(0, syncInFlightCount - 1);
+            if (syncInFlightCount === 0) {
+                updateFirebaseStatus(pendingSync ? 'error' : 'connected');
+            }
+        });
+    }
+
+    function saveAdditionalCriteria() {
+        const dataStr = JSON.stringify(additionalCriteriaPerPractice);
+        lastSyncHash = dataStr;
+        // Siempre guardar en localStorage como respaldo local
+        localStorage.setItem("additionalCriteriaPerPractice", dataStr);
+        // Sincronización automática con Firebase tras cada cambio
+        pushToFirebase();
+        renderPractices();
+    }
+
+    // Obtiene todos los criterios de una práctica (originales + extras - eliminados)
+    function getPracticeCriteria(practice) {
+        const base = practice.criteria || [];
+        const extra = additionalCriteriaPerPractice[practice.id] || [];
+        const removed = additionalCriteriaPerPractice[practice.id + '_removed'] || [];
+        const removedSet = new Set(removed);
+        // Eliminar duplicados y excluir los eliminados por el usuario
+        return [...new Set([...base, ...extra])].filter(c => !removedSet.has(c)).sort();
+    }
+
+    // Añade uno o varios criterios a una práctica
+    function addCriteriaToPractice(practiceId, criteriaList) {
+        if (!editModeEnabled) return; // Modo edición desactivado: no permitir cambios
+        if (!additionalCriteriaPerPractice[practiceId]) {
+            additionalCriteriaPerPractice[practiceId] = [];
+        }
+        let added = false;
+        criteriaList.forEach(criterion => {
+            if (!additionalCriteriaPerPractice[practiceId].includes(criterion)) {
+                additionalCriteriaPerPractice[practiceId].push(criterion);
+                added = true;
+            }
+            // Si el criterio estaba en la lista de eliminados, quitarlo de ahí
+            if (additionalCriteriaPerPractice[practiceId + '_removed']) {
+                additionalCriteriaPerPractice[practiceId + '_removed'] = additionalCriteriaPerPractice[practiceId + '_removed'].filter(c => c !== criterion);
+                if (additionalCriteriaPerPractice[practiceId + '_removed'].length === 0) {
+                    delete additionalCriteriaPerPractice[practiceId + '_removed'];
+                }
+            }
+        });
+        if (added) {
+            saveAdditionalCriteria(); // ya llama a renderPractices()
+        }
+    }
+
+    // Elimina un criterio (base o adicional) de una práctica
+    function removeCriterionFromPractice(practiceId, criterionCode) {
+        if (!editModeEnabled) return; // Modo edición desactivado: no permitir cambios
+        // Primero: si es un criterio adicional, quitarlo de la lista de extras
+        if (additionalCriteriaPerPractice[practiceId]) {
+            additionalCriteriaPerPractice[practiceId] = additionalCriteriaPerPractice[practiceId].filter(c => c !== criterionCode);
+            if (additionalCriteriaPerPractice[practiceId].length === 0) {
+                delete additionalCriteriaPerPractice[practiceId];
+            }
+        }
+        // Segundo: registrar el criterio como eliminado (para criterios base y también extras)
+        if (!additionalCriteriaPerPractice[practiceId + '_removed']) {
+            additionalCriteriaPerPractice[practiceId + '_removed'] = [];
+        }
+        if (!additionalCriteriaPerPractice[practiceId + '_removed'].includes(criterionCode)) {
+            additionalCriteriaPerPractice[practiceId + '_removed'].push(criterionCode);
+        }
+        saveAdditionalCriteria(); // ya llama a renderPractices()
+    }
+
+    // --------------------------------------------------------------
+    // VARIABLES GLOBALES DE INTERFAZ
+    // --------------------------------------------------------------
+    let currentMode = 'class';
+    let currentCategory = 'all';
+    let currentPracticeIdForModal = null;
+    let editModeEnabled = true; // Estado del modo edición (interruptor deslizante)
+
+    // --------------------------------------------------------------
+    // MODO EDICIÓN: interruptor deslizante que activa/desactiva la edición
+    // --------------------------------------------------------------
+    function updateEditModeUI() {
+        const toggle = document.getElementById('editModeToggle');
+        if (toggle) toggle.checked = editModeEnabled;
+        const hint = document.getElementById('editModeHint');
+        if (hint) {
+            hint.innerHTML = editModeEnabled
+                ? 'Permite añadir y quitar criterios de las prácticas.'
+                : 'Criterios protegidos: solo lectura.';
+        }
+        const headerHint = document.getElementById('headerHint');
+        if (headerHint) {
+            headerHint.innerHTML = editModeEnabled
+                ? '<i class="fas fa-pen-to-square"></i> Modo edición activo: puedes añadir o quitar criterios.'
+                : '<i class="fas fa-lock"></i> Modo edición desactivado: los criterios están protegidos (solo lectura).';
+        }
+    }
+
+    function setEditMode(enabled, fromRemote = false) {
+        editModeEnabled = enabled;
+        if (!fromRemote) lastLocalEditModeChange = Date.now(); // Marca de tiempo del cambio local
+        // Persistir el estado para mantenerlo entre sesiones
+        try { localStorage.setItem("editModeEnabled", enabled ? "true" : "false"); } catch (e) { /* localStorage no disponible */ }
+        updateEditModeUI();
+        renderPractices(); // Vuelve a pintar las tarjetas con o sin controles de edición
+        // Sincronización automática con Firebase tras cada cambio
+        // (excepto cuando el cambio proviene de la nube, para evitar bucles)
+        if (!fromRemote) {
+            pushToFirebase();
+        }
+    }
+
+    // --------------------------------------------------------------
+    // FUNCIONES DE RENDERIZADO
+    // --------------------------------------------------------------
+    function changeMode(mode) {
+        currentMode = mode;
+        currentCategory = 'all';
+        document.getElementById('mode-class-btn').classList.toggle('active', mode === 'class');
+        document.getElementById('mode-all-btn').classList.toggle('active', mode === 'all');
+        document.getElementById('categories-class').style.display = mode === 'class' ? 'block' : 'none';
+        document.getElementById('categories-all').style.display = mode === 'all' ? 'block' : 'none';
+        document.getElementById('viewTitle').innerText = mode === 'class' ? "Prácticas de 4º ESO" : "Banco de Recursos Completo";
+        document.getElementById('viewDesc').innerText = mode === 'class' 
+            ? "Programación prioritaria ordenada por la imagen de referencia." 
+            : "Listado completo de todas las prácticas.";
+        renderCategories();
+        renderPractices();
+    }
+
+    function renderCategories() {
+        const containerId = currentMode === 'class' ? 'categories-class' : 'categories-all';
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+        const allLink = document.createElement('a');
+        allLink.className = `cat-link ${currentCategory === 'all' ? 'active' : ''}`;
+        allLink.innerHTML = "◈ Ver todas";
+        allLink.href = "#";
+        allLink.onclick = (e) => { e.preventDefault(); currentCategory = 'all'; renderCategories(); renderPractices(); };
+        container.appendChild(allLink);
+
+        const usedCats = new Set();
+        practicesData.forEach(p => {
+            if (currentMode === 'all' || classPracticesIds.includes(p.id)) usedCats.add(p.category);
+        });
+        Object.keys(categoriesMap).forEach(catId => {
+            if (usedCats.has(catId)) {
+                const link = document.createElement('a');
+                link.className = `cat-link ${currentCategory === catId ? 'active' : ''}`;
+                link.innerHTML = categoriesMap[catId];
+                link.href = "#";
+                link.onclick = (e) => { e.preventDefault(); currentCategory = catId; renderCategories(); renderPractices(); };
+                container.appendChild(link);
+            }
+        });
+    }
+
+    function renderPractices() {
+        const grid = document.getElementById('cardsGrid');
+        const search = document.getElementById('searchBox').value.toLowerCase();
+        grid.innerHTML = '';
+
+        let source = [];
+        if (currentMode === 'class') {
+            source = classPracticesIds.map(id => practicesData.find(p => p.id === id)).filter(p => p);
+        } else {
+            source = [...practicesData];
+        }
+
+        const filtered = source.filter(p => {
+            const matchesCat = (currentCategory === 'all') || (p.category === currentCategory);
+            const matchesSearch = p.title.toLowerCase().includes(search) || p.id.toLowerCase().includes(search);
+            return matchesCat && matchesSearch;
+        });
+
+        document.getElementById('counter').innerText = `${filtered.length} recursos mostrados`;
+
+        filtered.forEach(p => {
+            const practiceCrit = getPracticeCriteria(p);
+            // Determinar qué criterios de los 13 NO están asignados
+            const missingCriteria = ALL_CRITERIA_CODES.filter(c => !practiceCrit.includes(c));
+            // El botón de añadir solo aparece si el modo edición está activo
+            const showAddButton = editModeEnabled && missingCriteria.length > 0;
+
+            const cardCol = document.createElement('div');
+            cardCol.className = 'col';
+            cardCol.innerHTML = `
+                <div class="card h-100 practice-card cat-${p.category}">
+                    <div class="card-body p-4 d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="badge badge-id rounded px-2 py-1">${p.id}</span>
+                            <span class="cat-label">${categoriesMap[p.category] || p.category}</span>
+                        </div>
+                        <h5 class="card-title fw-bold text-dark mb-3">${p.title}</h5>
+                        <div class="mb-3 d-flex flex-wrap align-items-center gap-1" id="criteria-container-${p.id}">
+                            ${practiceCrit.map(c => {
+                                // La X de eliminar solo se muestra con el modo edición activo
+                                const removeBtn = editModeEnabled ? `<span class="remove-criterion" data-practice="${p.id}" data-criterion="${c}">❌</span>` : '';
+                                return `<span class="badge criterion-tag rounded-pill px-2 py-1" data-bs-toggle="popover" data-bs-trigger="hover" title="${c}" data-bs-content="${criteriaDescriptions[c] || 'Descripción no disponible.'}">
+                                            ${c} ${removeBtn}
+                                        </span>`;
+                            }).join('')}
+                            ${showAddButton ? `<button class="btn btn-sm btn-outline-success btn-add-criteria ms-1" data-practice-id="${p.id}" title="Añadir criterios extra"><i class="fas fa-plus"></i> Criterio(s)</button>` : ''}
+                        </div>
+                        <div class="mt-auto">
+                            <a href="${p.url}" class="btn btn-outline-primary w-100 rounded-pill py-2 fw-bold" onclick="event.preventDefault(); window.location.href=this.href;">
+                                Ver Práctica <i class="fas fa-external-link-alt ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(cardCol);
+        });
+
+        // Destruir popovers anteriores para evitar acumulación y persistencia
+        document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
+            const existing = bootstrap.Popover.getInstance(el);
+            if (existing) existing.dispose();
+        });
+
+        // Inicializar popovers (hover) con retardo mínimo para ocultar rápido
+        const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+        popoverTriggerList.map(el => new bootstrap.Popover(el, {
+            trigger: 'hover',
+            placement: 'top',
+            html: false,
+            delay: { show: 250, hide: 80 }
+        }));
+
+        // Ocultar cualquier popover visible al salir de los criterios
+        document.querySelectorAll('[id^="criteria-container-"]').forEach(el => {
+            el.addEventListener('mouseleave', () => {
+                document.querySelectorAll('.popover.show').forEach(pop => {
+                    pop.classList.remove('show');
+                });
+            });
+        });
+
+        // Eventos para botones "Añadir criterio(s)"
+        document.querySelectorAll('.btn-add-criteria').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const practiceId = btn.getAttribute('data-practice-id');
+                currentPracticeIdForModal = practiceId;
+                const practice = practicesData.find(p => p.id === practiceId);
+                if (!practice) return;
+                const currentCrit = getPracticeCriteria(practice);
+                const available = ALL_CRITERIA_CODES.filter(c => !currentCrit.includes(c));
+                const checklistDiv = document.getElementById('criteriaChecklist');
+                checklistDiv.innerHTML = '';
+                if (available.length === 0) {
+                    checklistDiv.innerHTML = '<p class="text-muted">No hay criterios disponibles para añadir (ya están todos).</p>';
+                } else {
+                    available.forEach(code => {
+                        const desc = criteriaDescriptions[code];
+                        const div = document.createElement('div');
+                        div.className = 'form-check mb-3';
+                        div.innerHTML = `
+                            <input class="form-check-input" type="checkbox" value="${code}" id="chk_${code}">
+                            <label class="form-check-label" for="chk_${code}" style="white-space:normal; word-break:break-word; overflow-wrap:break-word;">
+                                <strong>${code}</strong><br><small class="text-muted" style="white-space:normal;">${desc}</small>
+                            </label>
+                        `;
+                        checklistDiv.appendChild(div);
+                    });
+                }
+                new bootstrap.Modal(document.getElementById('addCriteriaModal')).show();
+            });
+        });
+
+        // Eventos para eliminar criterios adicionales (delegación)
+        document.querySelectorAll('.remove-criterion').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const practiceId = el.getAttribute('data-practice');
+                const criterion = el.getAttribute('data-criterion');
+                if (confirm(`¿Eliminar el criterio ${criterion} de esta práctica?`)) {
+                    removeCriterionFromPractice(practiceId, criterion);
+                }
+            });
+        });
+    }
+
+    // --------------------------------------------------------------
+    // INICIALIZACIÓN Y EVENTOS
+    // --------------------------------------------------------------
+    window.onload = () => {
+        loadStorage();
+
+        // Restaurar el estado del modo edición (interruptor) antes del primer renderizado
+        let savedEditMode = null;
+        try { savedEditMode = localStorage.getItem("editModeEnabled"); } catch (e) { /* localStorage no disponible */ }
+        editModeEnabled = (savedEditMode === null) ? true : (savedEditMode === "true");
+        updateEditModeUI();
+
+        changeMode('class');
+        window.__appInitialized = true;
+
+        // Interruptor deslizante del modo edición
+        document.getElementById('editModeToggle').addEventListener('change', (e) => {
+            setEditMode(e.target.checked);
+        });
+
+        // Confirmar añadir criterios desde el modal
+        document.getElementById('confirmAddCriteria').addEventListener('click', () => {
+            if (currentPracticeIdForModal) {
+                const selected = [];
+                document.querySelectorAll('#criteriaChecklist input[type="checkbox"]:checked').forEach(cb => {
+                    selected.push(cb.value);
+                });
+                if (selected.length > 0) {
+                    addCriteriaToPractice(currentPracticeIdForModal, selected);
+                } else {
+                    alert("No has seleccionado ningún criterio.");
+                }
+            }
+            bootstrap.Modal.getInstance(document.getElementById('addCriteriaModal')).hide();
+        });
+
+        // Buscador
+        document.getElementById('searchBox').addEventListener('input', renderPractices);
+
+        // Conectar Firebase en segundo plano (no bloquea la carga)
+        connectFirebaseSync();
+    };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Registro del Service Worker para PWA
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js').then((reg) => {
+                console.log('Service Worker registrado:', reg.scope);
+            }).catch((err) => {
+                console.warn('Service Worker no registrado:', err.message);
+            });
+        });
+    }
+</script>
+</body>
+</html>
