@@ -34,11 +34,15 @@ self.addEventListener('install', (event) => {
 });
 
 // Activación: limpiar cachés antiguas
+// Solo borrar cachés de esta propia app (por prefijo): no tocar las cachés
+// del portal ni las de otras apps alojadas en subcarpetas del mismo dominio.
+const esCachePropia = (c) => c.startsWith('arduinoblocks-');
+
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+        keys.filter((key) => key !== CACHE_NAME && esCachePropia(key)).map((key) => caches.delete(key))
       );
     })
   );
