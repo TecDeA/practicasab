@@ -2,9 +2,12 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="description" content="Gestor de prácticas ArduinoBlocks con criterios de evaluación TEC4 sincronizados en tiempo real.">
+    <!-- Multiplataforma: viewport-fit=cover para pantallas con notch y esquinas redondeadas -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Gestor de prácticas ArduinoBlocks con criterios de evaluación TEC4 sincronizados en tiempo real.">
     <meta name="theme-color" content="#0d6efd">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="ArduinoBlocks">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="ArduinoBlocks">
@@ -17,20 +20,27 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Preconnects: aceleran la carga de CDNs y del SDK de Firebase -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
     <style>
 /* ============================================================
-           ArduinoBlocks TEC4 — Rediseño moderno
+           ArduinoBlocks TEC4 — Rediseño moderno (refactorizado)
            Paleta: azul -> índigo -> violeta sobre sidebar oscura
            ============================================================ */
         :root {
             --sidebar-width: 280px;
+            --topbar-height: 56px;
             --grad-primary: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%);
             --grad-sidebar: linear-gradient(195deg, #1e293b 0%, #0f172a 65%);
             --text-strong: #0f172a;
             --text-soft: #64748b;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
         }
         body {
             background-color: #f4f7fd;
@@ -65,10 +75,16 @@
         .sidebar::-webkit-scrollbar-thumb { background: #334155; background-clip: content-box; }
         .sidebar::-webkit-scrollbar-thumb:hover { background: #475569; background-clip: content-box; }
 
+        /* Multiplataforma: sin retardo de doble toque en botones/enlaces táctiles */
+        a, button, label, .btn, .cat-link, .edit-mode-switch { touch-action: manipulation; }
+        /* Accesibilidad: foco visible al navegar con teclado */
+        :focus-visible { outline: 3px solid rgba(99, 102, 241, 0.55); outline-offset: 2px; border-radius: 6px; }
+
         /* ---------- Barra lateral oscura con brillos de color ---------- */
         .sidebar {
             width: var(--sidebar-width);
             height: 100vh;
+            height: 100dvh; /* FIX iOS/Android: evita el desbordamiento de 100vh con barras dinámicas */
             position: fixed;
             top: 0;
             left: 0;
@@ -78,9 +94,12 @@
                 radial-gradient(520px 320px at 120% 110%, rgba(14, 165, 233, 0.20), transparent 60%),
                 var(--grad-sidebar);
             border-right: 1px solid rgba(148, 163, 184, 0.15);
-            z-index: 1000;
+            z-index: 1050;
             padding: 1.5rem;
+            padding-top: calc(1.5rem + var(--safe-top));
+            padding-bottom: calc(1.5rem + var(--safe-bottom));
             overflow-y: auto;
+            overscroll-behavior: contain; /* el scroll no "se escapa" del menú */
         }
         .sidebar h4 { color: #f8fafc !important; letter-spacing: -0.2px; }
         .sidebar h4 .fa-microchip {
@@ -110,11 +129,120 @@
         .sidebar .form-label { color: #94a3b8 !important; }
         .sidebar small.text-muted, #editModeHint { color: #94a3b8 !important; }
 
+        /* ---------- Chip de versión (extraída dinámicamente del Service Worker) ---------- */
+        .version-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-top: 0.4rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            color: #c7d2fe;
+            background: rgba(99, 102, 241, 0.16);
+            border: 1px solid rgba(129, 140, 248, 0.35);
+            border-radius: 999px;
+            padding: 0.22rem 0.75rem;
+            cursor: default;
+            user-select: none;
+            transition: background 0.25s ease, color 0.25s ease;
+        }
+        .version-chip:hover { background: rgba(99, 102, 241, 0.3); color: #e0e7ff; }
+        .version-chip .chip-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #818cf8;
+            box-shadow: 0 0 8px rgba(129, 140, 248, 0.9);
+            flex-shrink: 0;
+        }
+
         .main-content {
             margin-left: var(--sidebar-width);
             padding: 2rem;
             position: relative;
         }
+        .main-content .container-fluid { max-width: 1700px; }
+
+        /* ---------- Barra superior móvil (hamburguesa + estado Firebase) ---------- */
+        .app-topbar {
+            display: none; /* solo visible en <992px vía media query */
+            align-items: center;
+            gap: 0.75rem;
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+            min-height: calc(var(--topbar-height) + var(--safe-top));
+            padding: 0.45rem 0.9rem;
+            padding-top: calc(0.45rem + var(--safe-top));
+            background: rgba(248, 250, 252, 0.9);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+        }
+        .app-topbar-title {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: 'Poppins', 'Inter', sans-serif;
+            font-weight: 700;
+            font-size: 1.02rem;
+            color: #0f172a;
+            white-space: nowrap;
+        }
+        .app-topbar-title i { color: #6366f1; }
+        .btn-menu {
+            width: 44px;
+            height: 44px;
+            flex-shrink: 0;
+            border: none;
+            border-radius: 12px;
+            background: #0f172a;
+            color: #f8fafc;
+            font-size: 1.05rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 8px 18px -8px rgba(15, 23, 42, 0.55);
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+        .btn-menu:hover { background: #1e293b; }
+        .btn-menu:active { transform: scale(0.94); }
+
+        /* Botón de cerrar el menú lateral (solo móvil) */
+        .btn-close-sidebar {
+            display: none;
+            position: absolute;
+            top: calc(0.9rem + var(--safe-top));
+            right: 0.9rem;
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.25s ease, color 0.25s ease;
+            z-index: 2;
+        }
+        .btn-close-sidebar:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
+
+        /* Fondo oscurecido tras el menú lateral abierto (solo móvil) */
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            -webkit-backdrop-filter: blur(3px);
+            backdrop-filter: blur(3px);
+            z-index: 1040;
+            touch-action: none; /* sin scroll "fantasma" en móvil */
+        }
+        body.sidebar-open { overflow: hidden; }
+        body.sidebar-open .sidebar-backdrop { display: block; }
 
         /* ---------- Botones de modo (navegación) ---------- */
         .btn-mode {
@@ -167,7 +295,6 @@
             color: #f1f5f9;
             box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
         }
-
         /* ---------- Cabecera ---------- */
         #viewTitle {
             font-family: 'Poppins', 'Inter', sans-serif;
@@ -265,14 +392,22 @@
             box-shadow: 0 6px 14px -6px rgba(6, 182, 212, 0.6);
             color: #0e7490;
         }
+        /* FIX accesibilidad: botón real (era un <span> inaccesible por teclado) */
         .criterion-tag .remove-criterion {
             cursor: pointer;
             margin-left: 5px;
-            font-weight: bold;
+            font-size: 0.78rem;
+            line-height: 1;
             color: #f43f5e;
+            background: none;
+            border: 0;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
             transition: transform 0.15s ease, color 0.15s ease;
         }
-        .criterion-tag .remove-criterion:hover { color: #e11d48; transform: scale(1.3); }
+        .criterion-tag .remove-criterion:hover { color: #e11d48; transform: scale(1.25); }
+        .criterion-tag .remove-criterion:focus-visible { outline: 2px solid #e11d48; outline-offset: 1px; border-radius: 4px; }
 
         .popover {
             pointer-events: none;
@@ -323,7 +458,7 @@
         .practice-card .btn-outline-primary:hover i { transform: translate(2px, -2px); }
 
         /* ---------- Modal ---------- */
-        .criteria-checkbox-list { max-height: 65vh; overflow-y: auto; overflow-x: hidden; }
+        .criteria-checkbox-list { max-height: 65vh; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
         #addCriteriaModal .modal-body { overflow: visible !important; }
         #addCriteriaModal .form-check { overflow: visible !important; max-width: 100% !important; }
         #addCriteriaModal .form-check-label {
@@ -438,23 +573,125 @@
         .edit-mode-switch input:checked + .slider .slider-icon.on { opacity: 1; }
         .edit-mode-switch input:checked + .slider .slider-icon.off { opacity: 0; }
 
-        /* ---------- Responsive ---------- */
-        @media (max-width: 768px) {
-            .sidebar { width: 100%; height: auto; position: relative; }
-            .main-content { margin-left: 0; padding: 1rem; }
-            /* Firebase status: posicion estatica, no absolute, debajo del titulo */
-            #firebaseStatusBar {
-                position: static !important;
-                display: block !important;
-                margin-bottom: 0.75rem;
-            }
-            #firebaseStatusText { font-size: 0.7rem !important; }
-            header h1 { font-size: 1.5rem; }
-            header .mb-5 { margin-bottom: 1.5rem !important; }
+        /* ---------- Estado vacío (sin resultados de búsqueda) ---------- */
+        .empty-state { padding: 4rem 1rem; }
+        .empty-state-icon {
+            width: 84px;
+            height: 84px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+            color: #6366f1;
+            font-size: 1.8rem;
+            margin-bottom: 1.25rem;
         }
-        @media (min-width: 769px) {
-            /* En desktop, padding-right para que el titulo no choque con Firebase absolute */
-            .main-content header { padding-right: 210px; }
+        .empty-state h3 { font-family: 'Poppins', 'Inter', sans-serif; font-weight: 700; color: var(--text-strong); }
+
+        /* ---------- Avisos (toast) ---------- */
+        .app-toast {
+            position: fixed;
+            left: 50%;
+            bottom: calc(1.25rem + var(--safe-bottom));
+            transform: translate(-50%, 160%);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: #0f172a;
+            color: #f1f5f9;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            padding: 0.7rem 0.8rem 0.7rem 1.1rem;
+            border-radius: 14px;
+            box-shadow: 0 24px 55px -12px rgba(2, 6, 23, 0.6);
+            z-index: 1080;
+            opacity: 0;
+            visibility: hidden;
+            max-width: min(92vw, 520px);
+            transition: transform 0.35s cubic-bezier(0.21, 0.7, 0.3, 1), opacity 0.35s ease, visibility 0s linear 0.35s;
+        }
+        .app-toast.show {
+            transform: translate(-50%, 0);
+            opacity: 1;
+            visibility: visible;
+            transition: transform 0.35s cubic-bezier(0.21, 0.7, 0.3, 1), opacity 0.35s ease;
+        }
+        .app-toast #appToastMsg { font-size: 0.9rem; font-weight: 500; }
+        .btn-toast-close {
+            background: transparent;
+            border: 0;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 0.95rem;
+            padding: 0.35rem;
+            border-radius: 8px;
+        }
+        .btn-toast-close:hover { color: #f8fafc; }
+
+        /* ============================================================
+           RESPONSIVE / MULTIPLATAFORMA
+           <992px  : menú lateral convertible (drawer) + barra superior
+           >=992px : menú lateral fijo (diseño original de escritorio)
+           ============================================================ */
+        @media (max-width: 991.98px) {
+            /* Barra superior móvil con hamburguesa */
+            .app-topbar { display: flex; }
+            .main-content > .container-fluid { padding-top: 0.25rem; }
+            .main-content { margin-left: 0; padding: 1rem; }
+            .app-topbar { margin: 0 -1rem 1rem; }
+
+            /* Menú lateral como cajón deslizante */
+            .sidebar {
+                width: min(86vw, 320px);
+                padding: 1.25rem;
+                padding-top: calc(1.25rem + var(--safe-top));
+                padding-bottom: calc(1.5rem + var(--safe-bottom));
+                transform: translateX(-105%);
+                visibility: hidden;
+                box-shadow: 0 30px 80px rgba(2, 6, 23, 0.5);
+                transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s linear 0.32s;
+            }
+            body.sidebar-open .sidebar {
+                transform: none;
+                visibility: visible;
+                transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s;
+            }
+            .btn-close-sidebar { display: inline-flex; }
+            .sidebar .sidebar-brand { padding: 0 2.5rem; }
+
+            /* Indicador Firebase dentro de la barra superior (siempre visible) */
+            .app-topbar #firebaseStatusBar {
+                position: absolute;
+                right: 0.6rem;
+                top: 50%;
+                transform: translateY(-50%);
+                margin: 0;
+                max-width: 46vw;
+            }
+            .app-topbar #firebaseStatus { padding: 0.3rem 0.55rem; }
+            #firebaseStatusText { font-size: 0.66rem !important; }
+            .app-topbar #firebaseStatusText {
+                display: block;
+                max-width: 100%;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            /* FIX iOS: fuente de 16px en el buscador para evitar el zoom automático al enfocar */
+            .sidebar .form-control { font-size: 1rem; }
+
+            header h1 { font-size: 1.5rem; }
+            header.mb-5 { margin-bottom: 1.5rem !important; } /* FIX: era "header .mb-5" y nunca aplicaba */
+            .main-content header { padding-right: 0; }
+            #headerHint { display: none; } /* en móvil sobra; el menú ya indica el modo */
+        }
+        @media (min-width: 992px) {
+            .app-topbar { display: none; }
+            .sidebar-backdrop { display: none !important; }
+            /* En desktop, padding-right para que el titulo no choque con el indicador Firebase */
+            .main-content header { padding-right: 230px; }
+            .main-content > #firebaseStatusBar { position: absolute; top: 1rem; right: 1.5rem; z-index: 10; }
         }
 
         /* ---------- Accesibilidad: reducir movimiento ---------- */
@@ -468,84 +705,121 @@
     </style>
 </head>
 <body>
+<a class="visually-hidden-focusable" href="#mainContent">Saltar al contenido</a>
 
-<div class="sidebar">
-    <div class="text-center mb-4">
+<!-- Fondo oscurecido cuando el menú lateral está abierto (móvil) -->
+<div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
+
+<nav class="sidebar" id="sidebarNav" aria-label="Menú principal">
+    <!-- Cerrar menú (solo móvil) -->
+    <button type="button" class="btn-close-sidebar" id="btnCloseSidebar" aria-label="Cerrar el menú" aria-controls="sidebarNav">
+        <i class="fas fa-times" aria-hidden="true"></i>
+    </button>
+
+    <div class="text-center mb-4 sidebar-brand">
         <h4 class="fw-bold text-dark mb-1"><i class="fas fa-microchip text-primary me-2"></i>ArduinoBlocks</h4>
-        <a href="https://practicasarduinoblocks.blogspot.com/" target="_blank" class="badge bg-light text-muted border text-decoration-none" style="font-size:0.75rem;"><i class="fas fa-blog me-1"></i>Blog Prácticas de Arduinoblocks</a>
+        <!-- Chip con la versión de la app, extraída dinámicamente del Service Worker -->
+        <span id="versionChip" class="version-chip" title="Versión de la aplicación (según la caché del Service Worker)"><i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i></span>
+        <div class="mt-2">
+            <a href="https://practicasarduinoblocks.blogspot.com/" target="_blank" rel="noopener" class="badge bg-light text-muted border text-decoration-none" style="font-size:0.75rem;"><i class="fas fa-blog me-1" aria-hidden="true"></i>Blog Prácticas de Arduinoblocks</a>
+        </div>
     </div>
-    
+
     <div id="navigation-modes">
-        <button class="btn btn-mode active" id="mode-class-btn" onclick="changeMode('class')">
-            <i class="fas fa-user-graduate me-2"></i> Prácticas de 4º ESO
+        <button type="button" class="btn btn-mode active" id="mode-class-btn" data-mode="class" aria-pressed="true">
+            <i class="fas fa-user-graduate me-2" aria-hidden="true"></i> Prácticas de 4º ESO
         </button>
         <div id="categories-class" class="category-container"></div>
 
-        <button class="btn btn-mode" id="mode-all-btn" onclick="changeMode('all')">
-            <i class="fas fa-layer-group me-2"></i> Banco de Recursos
+        <button type="button" class="btn btn-mode" id="mode-all-btn" data-mode="all" aria-pressed="false">
+            <i class="fas fa-layer-group me-2" aria-hidden="true"></i> Banco de Recursos
         </button>
         <div id="categories-all" class="category-container" style="display:none;"></div>
     </div>
 
     <div class="mt-3 pt-3 border-top">
-        <label class="form-label small fw-bold text-muted text-uppercase">Buscador</label>
+        <label class="form-label small fw-bold text-muted text-uppercase" for="searchBox">Buscador</label>
         <div class="input-group input-group-sm">
-            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-            <input type="text" id="searchBox" class="form-control border-start-0 ps-0" placeholder="Ej: LDR, BT, P01...">
+            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted" aria-hidden="true"></i></span>
+            <input type="search" id="searchBox" class="form-control border-start-0 ps-0" placeholder="Ej: LDR, BT, P01..." autocomplete="off" enterkeyhint="search" aria-label="Buscar prácticas por nombre o código">
         </div>
     </div>
 
     <!-- Interruptor deslizante: activar/desactivar el modo edición -->
     <div class="mt-3 pt-3 border-top">
         <div class="d-flex align-items-center justify-content-between">
-            <span class="form-label small fw-bold text-muted text-uppercase mb-0" for="editModeToggle">
-                <i class="fas fa-pen-to-square me-1"></i>Modo edición
+            <span class="form-label small fw-bold text-muted text-uppercase mb-0" id="editModeLabel">
+                <i class="fas fa-pen-to-square me-1" aria-hidden="true"></i>Modo edición
             </span>
             <label class="edit-mode-switch" for="editModeToggle" title="Activar o desactivar la edición de criterios">
-                <input type="checkbox" role="switch" id="editModeToggle" checked>
+                <input type="checkbox" role="switch" id="editModeToggle" checked aria-describedby="editModeHint">
                 <span class="slider">
-                    <i class="fas fa-check slider-icon on"></i>
-                    <i class="fas fa-times slider-icon off"></i>
+                    <i class="fas fa-check slider-icon on" aria-hidden="true"></i>
+                    <i class="fas fa-times slider-icon off" aria-hidden="true"></i>
                 </span>
             </label>
         </div>
         <small class="text-muted d-block mt-1" id="editModeHint">Permite añadir y quitar criterios de las prácticas.</small>
     </div>
 
-</div>
+    <!-- Instalación de la PWA (visible cuando el navegador lo permite) -->
+    <div class="mt-3 pt-3 border-top d-none" id="installSection">
+        <button type="button" class="btn btn-mode w-100 d-none" id="btnInstall">
+            <i class="fas fa-download me-2" aria-hidden="true"></i> Instalar aplicación
+        </button>
+        <small class="text-muted d-block d-none" id="installHintIos">
+            En iOS: toca <strong>Compartir</strong> <i class="fas fa-share" aria-hidden="true"></i> y elige <strong>Añadir a pantalla de inicio</strong>.
+        </small>
+    </div>
 
-<div class="main-content">
-    <div class="container-fluid">
-        <!-- Indicador Firebase arriba a la derecha -->
-        <div id="firebaseStatusBar" class="position-absolute d-none d-md-block" style="top:0.75rem;right:1rem;z-index:10;">
+</nav>
+
+<main class="main-content" id="mainContent" tabindex="-1">
+    <!-- Barra superior móvil: hamburguesa + título + estado de sincronización -->
+    <div class="app-topbar">
+        <button type="button" class="btn-menu" id="btnOpenSidebar" aria-label="Abrir el menú" aria-controls="sidebarNav" aria-expanded="false">
+            <i class="fas fa-bars" aria-hidden="true"></i>
+        </button>
+        <span class="app-topbar-title"><i class="fas fa-microchip" aria-hidden="true"></i> ArduinoBlocks</span>
+        <!-- En escritorio, el JS reubica este indicador arriba a la derecha -->
+        <div id="firebaseStatusBar">
             <div id="firebaseStatus" class="d-flex align-items-center gap-2 small rounded-3 px-3 py-2" style="background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.3);">
                 <span id="firebaseStatusDot" class="rounded-circle d-inline-block" style="width:8px;height:8px;background:#ffc107;animation:pulse-dot 1.5s infinite;"></span>
                 <span id="firebaseStatusText" class="fw-semibold" style="color:#b8860b;font-size:0.75rem;">Conectando...</span>
             </div>
         </div>
+    </div>
 
+    <div class="container-fluid">
         <header class="mb-5">
             <h1 class="fw-bold" id="viewTitle">Prácticas de 4º ESO</h1>
-            <p class="text-muted" id="viewDesc">Ordenadas según el programa oficial.</p>
-            <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-primary rounded-pill px-3" id="counter">Cargando...</span>
+            <p class="text-muted" id="viewDesc">Programación prioritaria ordenada por la imagen de referencia.</p>
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <span class="badge bg-primary rounded-pill px-3" id="counter" aria-live="polite">Cargando...</span>
                 <small class="text-muted" id="headerHint"><i class="fas fa-info-circle"></i> Pasa el ratón por los criterios para ver su descripción.</small>
             </div>
         </header>
-        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 row-cols-xxl-4 g-4" id="cardsGrid"></div>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-4 g-4" id="cardsGrid"></div>
+
+        <!-- Estado vacío: no hay resultados de búsqueda -->
+        <div id="emptyState" class="empty-state text-center d-none" aria-live="polite">
+            <div class="empty-state-icon"><i class="fas fa-search" aria-hidden="true"></i></div>
+            <h3>No hay resultados</h3>
+            <p class="text-muted mb-0">No se han encontrado prácticas que coincidan con la búsqueda.<br>Prueba con otro término o cambia de categoría.</p>
+        </div>
     </div>
-</div>
+</main>
 
 <!-- MODAL para añadir criterios extra -->
-<div class="modal fade" id="addCriteriaModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="addCriteriaModal" tabindex="-1" aria-labelledby="addCriteriaModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Añadir criterios de evaluación</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="addCriteriaModalTitle">Añadir criterios de evaluación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <p>Selecciona los criterios que quieres añadir a esta práctica (múltiples):</p>
+                <p>Selecciona los criterios que quieres añadir a esta práctica (puedes elegir varios):</p>
                 <div id="criteriaChecklist" class="criteria-checkbox-list"></div>
             </div>
             <div class="modal-footer">
@@ -556,10 +830,49 @@
     </div>
 </div>
 
+<!-- Aviso flotante (toast): actualizaciones, instalación, avisos -->
+<div class="app-toast" id="appToast" role="status" aria-live="polite">
+    <span id="appToastMsg"></span>
+    <button type="button" class="btn btn-sm btn-light rounded-pill fw-semibold" id="appToastAction"></button>
+    <button type="button" class="btn-toast-close" id="appToastClose" aria-label="Cerrar aviso"><i class="fas fa-times" aria-hidden="true"></i></button>
+</div>
+
+<!-- Bootstrap bundle ANTES del código de la app: garantiza window.bootstrap -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // --------------------------------------------------------------
+(function () {
+    'use strict';
+
+    // ==============================================================
+    // 1. UTILIDADES
+    // ==============================================================
+    const $ = (sel, ctx = document) => ctx.querySelector(sel);
+    const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
+
+    // FIX: todo el contenido dinámico se escapa antes de insertarlo en HTML
+    const escapeHtml = (value) => String(value == null ? '' : value).replace(/[&<>"']/g, (ch) => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+    ));
+
+    // Búsqueda con retardo: evita re-renderizados en cada tecla
+    const debounce = (fn, wait = 150) => {
+        let timer = null;
+        return (...args) => {
+            window.clearTimeout(timer);
+            timer = window.setTimeout(() => fn(...args), wait);
+        };
+    };
+
+    // ==============================================================
+    // 2. CONFIGURACIÓN
+    // ==============================================================
+    const STORAGE_KEYS = {
+        criteria: 'additionalCriteriaPerPractice',
+        editMode: 'editModeEnabled'
+    };
+    const APP_STATE_REF = 'appState'; // Nodo remoto compartido: { editModeEnabled, editModeUpdatedAt }
+
     // CONFIGURACIÓN FIREBASE — Sincronización entre navegadores
-    // --------------------------------------------------------------
     // Instrucciones:
     //   1. Ve a https://console.firebase.google.com y crea un proyecto
     //   2. En Build > Realtime Database, crea una base de datos (modo test)
@@ -568,65 +881,24 @@
     //   5. En Reglas de la base de datos, pon: { "rules": { ".read": true, ".write": true } }
     //
     // Si no configuras Firebase, la app usará localStorage local (sin sincronizar).
-    // --------------------------------------------------------------
-        const firebaseConfig = {
-          apiKey: "AIzaSyCYLbcE_zVQpZdolgZww18uGvLhdOLo-wM",
-          authDomain: "arduinoblocks01.firebaseapp.com",
-          databaseURL: "https://arduinoblocks01-default-rtdb.europe-west1.firebasedatabase.app",
-          projectId: "arduinoblocks01",
-          storageBucket: "arduinoblocks01.firebasestorage.app",
-          messagingSenderId: "584506334188",
-          appId: "1:584506334188:web:42851bdb11037c01cf7ec9"
-        };
-    let firebaseDB = null;
-    let useFirebase = false;
-    let lastSyncHash = ''; // Para evitar re-renderizados duplicados
-    let isOnline = false;             // Conexión actual con Firebase
-    let pendingSync = false;          // Cambios locales pendientes de subir a la nube
-    let syncInFlightCount = 0;        // Subidas automáticas en curso
-    let lastLocalEditModeChange = 0;  // Marca de tiempo del último cambio local del interruptor
-    const APP_STATE_REF = 'appState'; // Nodo remoto compartido: { editModeEnabled, editModeUpdatedAt }
+    const firebaseConfig = {
+        apiKey: "AIzaSyCYLbcE_zVQpZdolgZww18uGvLhdOLo-wM",
+        authDomain: "arduinoblocks01.firebaseapp.com",
+        databaseURL: "https://arduinoblocks01-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "arduinoblocks01",
+        storageBucket: "arduinoblocks01.firebasestorage.app",
+        messagingSenderId: "584506334188",
+        appId: "1:584506334188:web:42851bdb11037c01cf7ec9"
+    };
 
-    // Carga Firebase de forma dinámica solo si está configurado (no bloquea la carga de la página)
-    async function initFirebase() {
-        const firebaseNeedsInit = firebaseConfig.apiKey !== "TU_API_KEY_AQUI";
-        if (!firebaseNeedsInit) {
-            console.warn("Firebase no configurado. Se usará localStorage (sin sincronización entre dispositivos).");
-            return false;
-        }
-        try {
-            // Cargar SDKs de Firebase dinámicamente
-            await Promise.all([
-                loadScript("https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"),
-                loadScript("https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js")
-            ]);
-            firebase.initializeApp(firebaseConfig);
-            firebaseDB = firebase.database();
-            console.log("Firebase inicializado. Sincronización entre dispositivos activada.");
-            return true;
-        } catch (e) {
-            console.error("Error al inicializar Firebase:", e.message);
-            return false;
-        }
-    }
-
-    function loadScript(src) {
-        return new Promise((resolve, reject) => {
-            const s = document.createElement('script');
-            s.src = src;
-            s.onload = resolve;
-            s.onerror = () => reject(new Error("No se pudo cargar: " + src));
-            document.head.appendChild(s);
-        });
-    }
-
-    // --------------------------------------------------------------
+    // ==============================================================
+    // 3. DATOS
+    // ==============================================================
     // CRITERIOS COMPLETOS (13 según currículo TEC4)
-    // --------------------------------------------------------------
     const criteriaDescriptions = {
         "TEC.4.1.1": "Idear y planificar soluciones tecnológicas emprendedoras que generen un valor para la comunidad, a partir de la observación y el análisis del entorno más cercano, estudiando sus necesidades, requisitos y posibilidades de mejora.",
         "TEC.4.1.2": "Aplicar con iniciativa estrategias colaborativas de gestión de proyectos con una perspectiva interdisciplinar y siguiendo un proceso iterativo de validación, desde la fase de ideación hasta la difusión de la solución.",
-                "TEC.4.1.3": "Abordar la gestión del proyecto de forma creativa, aplicando estrategias y técnicas colaborativas adecuadas, así como métodos de investigación en la ideación de soluciones lo más eficientes, accesibles e innovadoras posibles.", 
+        "TEC.4.1.3": "Abordar la gestión del proyecto de forma creativa, aplicando estrategias y técnicas colaborativas adecuadas, así como métodos de investigación en la ideación de soluciones lo más eficientes, accesibles e innovadoras posibles.",
         "TEC.4.2.1": "Analizar el diseño de un producto que dé respuesta a una necesidad planteada, evaluando su demanda, evolución y previsión de fin de ciclo de vida con un criterio ético, responsable e inclusivo.",
         "TEC.4.2.2": "Fabricar productos y soluciones tecnológicas, aplicando herramientas de diseño asistido, técnicas de elaboración manual, mecánica y digital y utilizando los materiales y recursos mecánicos, eléctricos, electrónicos y digitales adecuados.",
         "TEC.4.3.1": "Intercambiar información y fomentar el trabajo en equipo de manera asertiva, empleando las herramientas digitales adecuadas junto con el vocabulario técnico, símbolos y esquemas de sistemas tecnológicos apropiados.",
@@ -636,11 +908,11 @@
         "TEC.4.5.1": "Resolver tareas propuestas de manera eficiente mediante el uso y configuración de diferentes aplicaciones y herramientas digitales, aplicando conocimientos interdisciplinares con autonomía.",
         "TEC.4.6.1": "Hacer un uso responsable de la tecnología, mediante el análisis y aplicación de criterios de sostenibilidad y accesibilidad en la selección de materiales y en el diseño de estos, así como en los procesos de fabricación de productos tecnológicos, minimizando el impacto negativo en la sociedad y en el planeta.",
         "TEC.4.6.2": "Analizar los beneficios que, en el cuidado del entorno, aportan la arquitectura bioclimática y el ecotransporte, valorando la contribución de las tecnologías al desarrollo sostenible.",
-                "TEC.4.6.3": "Identificar y valorar la repercusión y los beneficios del desarrollo de proyectos tecnológicos de carácter social, por medio de comunidades abiertas, acciones de voluntariado o proyectos de servicio a la comunidad."
-                };
+        "TEC.4.6.3": "Identificar y valorar la repercusión y los beneficios del desarrollo de proyectos tecnológicos de carácter social, por medio de comunidades abiertas, acciones de voluntariado o proyectos de servicio a la comunidad."
+    };
 
     // Lista ordenada de todos los códigos de criterio
-    const ALL_CRITERIA_CODES = Object.keys(criteriaDescriptions);  // 13 elementos
+    const ALL_CRITERIA_CODES = Object.keys(criteriaDescriptions); // 13 elementos
 
     const classPracticesIds = [
         "P01_L","P02A_L","P02B_L","P02C_L","P02D_L","P02E_L","P02F_L","P02G_L","P02H_L","P02I_L","P03_L","P04_L",
@@ -684,7 +956,7 @@
         { id: "P21A_SERVO", title: "Servo a tramos", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P21A_SERVO.%20Control%20del%20giro%20de%20un%20servo%20a%20tramos" },
         { id: "P21B_SERVO", title: "Servo a tramos", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P21B_SERVO.%20Control%20del%20giro%20de%20un%20servo%20a%20tramos" },
         { id: "P22_SERVO", title: "Servo con 2 pulsadores", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P22_SERVO.%20Control%20del%20giro%20de%20un%20servo%20con%202%20pulsadores" },
-        { id: "P23_SERVO", title: "Servo con potenciómetro", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P23_SERVO.%20Control%20de%20un%20servo%20con%20potenciometro" },
+        { id: "P23_SERVO", title: "Servo con potenciómetro", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P23_SERVO.%20Control%20del%20giro%20de%20un%20servo%20con%20potenciometro" },
         { id: "P24_SERVO", title: "Movimiento de 2 servos", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P24_SERVO.%20Movimiento%20de%202%20servos" },
         { id: "P25_MOT", title: "Avance motor con interruptor", category: "movimiento", criteria: ["TEC.4.4.1"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P25_MOT.%20Control%20avance%20de%201%20motor%20con%20interruptor" },
         { id: "P26A_MOT", title: "Avance y paro motor", category: "movimiento", criteria: ["TEC.4.2.2"], url: "https://practicasarduinoblocks.blogspot.com/search/label/P26A_MOT.%20Control%20avance%20y%20paro%20de%201%20motor%20con%20interruptor" },
@@ -760,111 +1032,164 @@
         otros: "🛠️ Especiales / BT"
     };
 
-    // --------------------------------------------------------------
-    // PERSISTENCIA: criterios adicionales por práctica
-    // --------------------------------------------------------------
+    // Índice rápido id -> práctica (evita practicesData.find en cada búsqueda)
+    const practicesById = {};
+    practicesData.forEach((p) => { practicesById[p.id] = p; });
+
+
+    // ==============================================================
+    // 4. ESTADO GLOBAL
+    // ==============================================================
+    let currentMode = 'class';          // 'class' | 'all'
+    let currentCategory = 'all';
+    let currentPracticeIdForModal = null;
+    let editModeEnabled = true;          // Estado del modo edición (interruptor)
+
     let additionalCriteriaPerPractice = {}; // { "P01_L": ["TEC.4.5.1", ...] }
 
-    function loadStorage() {
-        // Cargar datos desde localStorage siempre de forma inmediata
-        try {
-            const stored = localStorage.getItem("additionalCriteriaPerPractice");
-            if (stored) additionalCriteriaPerPractice = JSON.parse(stored);
-            else additionalCriteriaPerPractice = {};
-        } catch (e) {
-            console.error("Error al leer localStorage, se reinician los datos:", e.message);
-            additionalCriteriaPerPractice = {};
-            localStorage.removeItem("additionalCriteriaPerPractice");
+    let firebaseDB = null;
+    let useFirebase = false;
+    let isOnline = false;               // Conexión actual con Firebase
+    let pendingSync = false;            // Cambios locales pendientes de subir a la nube
+    let syncInFlightCount = 0;          // Subidas automáticas en curso
+    let lastSyncHash = '';              // Para evitar re-renderizados duplicados
+    let lastLocalEditModeChange = 0;    // Marca de tiempo del último cambio local del interruptor
+    let serverTimeOffset = 0;           // FIX: desfase de reloj con el servidor Firebase
+
+    const serverNow = () => Date.now() + serverTimeOffset;
+
+    // ==============================================================
+    // 5. FIREBASE (carga dinámica, no bloquea la página)
+    // ==============================================================
+    function loadScript(src) {
+        return new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = src;
+            s.onload = resolve;
+            s.onerror = () => reject(new Error('No se pudo cargar: ' + src));
+            document.head.appendChild(s);
+        });
+    }
+
+    async function initFirebase() {
+        const configured = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== 'TU_API_KEY_AQUI';
+        if (!configured) {
+            console.warn('Firebase no configurado. Se usará localStorage (sin sincronización entre dispositivos).');
+            return { ok: false, configured: false };
         }
-        lastSyncHash = JSON.stringify(additionalCriteriaPerPractice);
+        try {
+            await Promise.all([
+                loadScript('https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js'),
+                loadScript('https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js')
+            ]);
+            firebase.initializeApp(firebaseConfig);
+            firebaseDB = firebase.database();
+            console.log('Firebase inicializado. Sincronización entre dispositivos activada.');
+            return { ok: true, configured: true };
+        } catch (e) {
+            console.error('Error al inicializar Firebase:', e.message);
+            return { ok: false, configured: true };
+        }
     }
 
     // Actualiza el indicador visual de estado de Firebase
     function updateFirebaseStatus(status) {
-        const container = document.getElementById('firebaseStatus');
-        const text = document.getElementById('firebaseStatusText');
+        const container = $('#firebaseStatus');
+        const text = $('#firebaseStatusText');
+        if (!container || !text) return;
         container.className = 'd-flex align-items-center gap-2 small rounded-3 px-3 py-2';
         if (status === 'connected') {
             container.classList.add('firebase-connected');
             container.style.background = 'rgba(25,135,84,0.08)';
             container.style.borderColor = 'rgba(25,135,84,0.25)';
-            text.innerHTML = '<i class="fas fa-cloud me-1"></i> Firebase conectado';
+            text.innerHTML = '<i class="fas fa-cloud me-1" aria-hidden="true"></i> Firebase conectado';
         } else if (status === 'syncing') {
             container.classList.add('firebase-syncing');
             container.style.background = 'rgba(13,110,253,0.08)';
             container.style.borderColor = 'rgba(13,110,253,0.25)';
-            text.innerHTML = '<i class="fas fa-arrows-rotate me-1"></i> Sincronizando...';
+            text.innerHTML = '<i class="fas fa-arrows-rotate me-1" aria-hidden="true"></i> Sincronizando...';
         } else if (status === 'error') {
             container.classList.add('firebase-disconnected');
             container.style.background = 'rgba(220,53,69,0.08)';
             container.style.borderColor = 'rgba(220,53,69,0.25)';
             text.innerHTML = pendingSync
-                ? '<i class="fas fa-cloud-arrow-up me-1"></i> Sin conexión · pendiente sincronizar'
-                : '<i class="fas fa-exclamation-triangle me-1"></i> Sin conexión';
+                ? '<i class="fas fa-cloud-arrow-up me-1" aria-hidden="true"></i> Sin conexión · pendiente'
+                : '<i class="fas fa-exclamation-triangle me-1" aria-hidden="true"></i> Sin conexión';
         } else if (status === 'not-configured') {
             container.classList.add('firebase-local');
             container.style.background = 'rgba(253,126,20,0.08)';
             container.style.borderColor = 'rgba(253,126,20,0.25)';
-            text.innerHTML = '<i class="fas fa-hdd me-1"></i> Modo local';
+            text.innerHTML = '<i class="fas fa-hdd me-1" aria-hidden="true"></i> Modo local';
         }
+    }
+
+    // Listeners de datos en tiempo real (se activan en cuanto hay conexión)
+    function attachDataListeners() {
+        // Criterios adicionales de todas las prácticas
+        firebaseDB.ref(STORAGE_KEYS.criteria).on('value', (snapshot) => {
+            const data = snapshot.val() || {};
+            const newHash = JSON.stringify(data);
+            if (newHash === lastSyncHash) return; // Sin cambios nuevos
+            // Si hay cambios locales pendientes de subir (o una subida en curso),
+            // el estado remoto no debe pisarlos: se subirán automáticamente
+            if (pendingSync || syncInFlightCount > 0) return;
+            lastSyncHash = newHash;
+            additionalCriteriaPerPractice = data;
+            try { localStorage.setItem(STORAGE_KEYS.criteria, newHash); } catch (e) { /* almacenamiento no disponible */ }
+            if (window.__appInitialized) renderPractices();
+        });
+
+        // Desfase de reloj con el servidor (comparación fiable de timestamps)
+        firebaseDB.ref('.info/serverTimeOffset').on('value', (s) => {
+            serverTimeOffset = s.val() || 0;
+        });
+
+        // Estado del modo edición (interruptor) en tiempo real
+        firebaseDB.ref(APP_STATE_REF).on('value', (snapshot) => {
+            const state = snapshot.val() || {};
+            const remoteEdit = state.editModeEnabled;
+            const remoteTs = state.editModeUpdatedAt || 0;
+            if (remoteEdit === undefined || remoteEdit === null) return; // Aún sin sincronizar
+            // Aplicar solo si el cambio remoto es más reciente que el último cambio local
+            if (remoteEdit !== editModeEnabled && remoteTs >= lastLocalEditModeChange) {
+                setEditMode(remoteEdit, true); // true = el cambio viene de la nube (no reenviar)
+            }
+        });
     }
 
     // Conecta Firebase en segundo plano (no bloquea la UI)
     async function connectFirebaseSync() {
-        const ok = await initFirebase();
-        if (ok) {
-            try {
-                // Verificar que la conexión funciona leyendo un dato
-                await firebaseDB.ref('.info/connected').once('value');
-                useFirebase = true;
-                updateFirebaseStatus('connected');
-                // Escuchar cambios de criterios en tiempo real desde Firebase
-                firebaseDB.ref('additionalCriteriaPerPractice').on('value', (snapshot) => {
-                    const data = snapshot.val() || {};
-                    const newHash = JSON.stringify(data);
-                    if (newHash === lastSyncHash) return; // Sin cambios nuevos
-                    // Si hay cambios locales pendientes de subir (o una subida en curso),
-                    // el estado remoto no debe pisarlos: se subirán automáticamente
-                    if (pendingSync || syncInFlightCount > 0) return;
-                    lastSyncHash = newHash;
-                    additionalCriteriaPerPractice = data;
-                    localStorage.setItem("additionalCriteriaPerPractice", newHash);
-                    if (window.__appInitialized) {
-                        renderPractices();
+        const { ok, configured } = await initFirebase();
+        if (!ok) {
+            // FIX: distinguir "sin configurar" (modo local) de "error de red"
+            updateFirebaseStatus(configured ? 'error' : 'not-configured');
+            return;
+        }
+        try {
+            useFirebase = true;
+            attachDataListeners();
+
+            // FIX: el estado de conexión se lee con .on('value'), que informa del
+            // valor real (true/false) al instante y ante cada reconexión. Antes se
+            // usaba .once() que resolvía también con "false" y mostraba un
+            // "conectado" incorrecto, y podía quedarse colgado sin timeout.
+            firebaseDB.ref('.info/connected').on('value', (snap) => {
+                isOnline = snap.val() === true;
+                if (isOnline) {
+                    if (pendingSync) {
+                        updateFirebaseStatus('syncing');
+                        pushToFirebase(); // Subida automática de los cambios encolados
+                    } else {
+                        updateFirebaseStatus('connected');
                     }
-                });
-                // Escuchar el estado del modo edición (interruptor) en tiempo real
-                firebaseDB.ref(APP_STATE_REF).on('value', (snapshot) => {
-                    const state = snapshot.val() || {};
-                    const remoteEdit = state.editModeEnabled;
-                    const remoteTs = state.editModeUpdatedAt || 0;
-                    if (remoteEdit === undefined || remoteEdit === null) return; // Aún sin sincronizar
-                    // Aplicar solo si el cambio remoto es más reciente que el último cambio local
-                    if (remoteEdit !== editModeEnabled && remoteTs >= lastLocalEditModeChange) {
-                        setEditMode(remoteEdit, true); // true = el cambio viene de la nube (no reenviar)
-                    }
-                });
-                // Detectar desconexión y subir automáticamente los cambios pendientes al reconectar
-                firebaseDB.ref('.info/connected').on('value', (snap) => {
-                    isOnline = snap.val() === true;
-                    if (isOnline) {
-                        if (pendingSync) {
-                            updateFirebaseStatus('syncing');
-                            pushToFirebase(); // Subida automática de los cambios encolados
-                        } else {
-                            updateFirebaseStatus('connected');
-                        }
-                    } else if (useFirebase) {
-                        updateFirebaseStatus('error');
-                    }
-                });
-            } catch (e) {
-                console.error("Error al verificar conexión Firebase:", e.message);
-                useFirebase = false;
-                updateFirebaseStatus('error');
-            }
-        } else {
-            updateFirebaseStatus('not-configured');
+                } else {
+                    updateFirebaseStatus('error');
+                }
+            });
+        } catch (e) {
+            console.error('Error al verificar conexión Firebase:', e.message);
+            useFirebase = false;
+            updateFirebaseStatus('error');
         }
     }
 
@@ -890,15 +1215,15 @@
         syncInFlightCount++;
         updateFirebaseStatus('syncing');
         Promise.all([
-            firebaseDB.ref('additionalCriteriaPerPractice').set(additionalCriteriaPerPractice),
+            firebaseDB.ref(STORAGE_KEYS.criteria).set(additionalCriteriaPerPractice),
             firebaseDB.ref(APP_STATE_REF).set({
                 editModeEnabled: editModeEnabled,
                 editModeUpdatedAt: firebase.database.ServerValue.TIMESTAMP
             })
         ]).then(() => {
-            console.log("Cambios sincronizados automáticamente con Firebase.");
+            console.log('Cambios sincronizados automáticamente con Firebase.');
         }).catch((err) => {
-            console.error("Error al sincronizar con Firebase:", err.message);
+            console.error('Error al sincronizar con Firebase:', err.message);
             pendingSync = true; // Reintentar automáticamente en el próximo cambio o reconexión
         }).finally(() => {
             syncInFlightCount = Math.max(0, syncInFlightCount - 1);
@@ -908,11 +1233,30 @@
         });
     }
 
+    // ==============================================================
+    // 6. PERSISTENCIA: criterios adicionales por práctica
+    // ==============================================================
+    function loadStorage() {
+        // Cargar datos desde localStorage siempre de forma inmediata
+        try {
+            const stored = localStorage.getItem(STORAGE_KEYS.criteria);
+            let parsed = stored ? JSON.parse(stored) : {};
+            // FIX: validar que lo almacenado es un objeto (datos corruptos no rompen la app)
+            if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) parsed = {};
+            additionalCriteriaPerPractice = parsed;
+        } catch (e) {
+            console.error('Error al leer localStorage, se reinician los datos:', e.message);
+            additionalCriteriaPerPractice = {};
+            try { localStorage.removeItem(STORAGE_KEYS.criteria); } catch (e2) { /* almacenamiento no disponible */ }
+        }
+        lastSyncHash = JSON.stringify(additionalCriteriaPerPractice);
+    }
+
     function saveAdditionalCriteria() {
         const dataStr = JSON.stringify(additionalCriteriaPerPractice);
         lastSyncHash = dataStr;
         // Siempre guardar en localStorage como respaldo local
-        localStorage.setItem("additionalCriteriaPerPractice", dataStr);
+        try { localStorage.setItem(STORAGE_KEYS.criteria, dataStr); } catch (e) { /* almacenamiento no disponible */ }
         // Sincronización automática con Firebase tras cada cambio
         pushToFirebase();
         renderPractices();
@@ -925,7 +1269,7 @@
         const removed = additionalCriteriaPerPractice[practice.id + '_removed'] || [];
         const removedSet = new Set(removed);
         // Eliminar duplicados y excluir los eliminados por el usuario
-        return [...new Set([...base, ...extra])].filter(c => !removedSet.has(c)).sort();
+        return [...new Set([...base, ...extra])].filter((c) => !removedSet.has(c)).sort();
     }
 
     // Añade uno o varios criterios a una práctica
@@ -935,14 +1279,15 @@
             additionalCriteriaPerPractice[practiceId] = [];
         }
         let added = false;
-        criteriaList.forEach(criterion => {
+        criteriaList.forEach((criterion) => {
             if (!additionalCriteriaPerPractice[practiceId].includes(criterion)) {
                 additionalCriteriaPerPractice[practiceId].push(criterion);
                 added = true;
             }
             // Si el criterio estaba en la lista de eliminados, quitarlo de ahí
             if (additionalCriteriaPerPractice[practiceId + '_removed']) {
-                additionalCriteriaPerPractice[practiceId + '_removed'] = additionalCriteriaPerPractice[practiceId + '_removed'].filter(c => c !== criterion);
+                additionalCriteriaPerPractice[practiceId + '_removed'] =
+                    additionalCriteriaPerPractice[practiceId + '_removed'].filter((c) => c !== criterion);
                 if (additionalCriteriaPerPractice[practiceId + '_removed'].length === 0) {
                     delete additionalCriteriaPerPractice[practiceId + '_removed'];
                 }
@@ -958,7 +1303,8 @@
         if (!editModeEnabled) return; // Modo edición desactivado: no permitir cambios
         // Primero: si es un criterio adicional, quitarlo de la lista de extras
         if (additionalCriteriaPerPractice[practiceId]) {
-            additionalCriteriaPerPractice[practiceId] = additionalCriteriaPerPractice[practiceId].filter(c => c !== criterionCode);
+            additionalCriteriaPerPractice[practiceId] =
+                additionalCriteriaPerPractice[practiceId].filter((c) => c !== criterionCode);
             if (additionalCriteriaPerPractice[practiceId].length === 0) {
                 delete additionalCriteriaPerPractice[practiceId];
             }
@@ -973,39 +1319,33 @@
         saveAdditionalCriteria(); // ya llama a renderPractices()
     }
 
-    // --------------------------------------------------------------
-    // VARIABLES GLOBALES DE INTERFAZ
-    // --------------------------------------------------------------
-    let currentMode = 'class';
-    let currentCategory = 'all';
-    let currentPracticeIdForModal = null;
-    let editModeEnabled = true; // Estado del modo edición (interruptor deslizante)
-
-    // --------------------------------------------------------------
-    // MODO EDICIÓN: interruptor deslizante que activa/desactiva la edición
-    // --------------------------------------------------------------
+    // ==============================================================
+    // 7. MODO EDICIÓN: interruptor que activa/desactiva la edición
+    // ==============================================================
     function updateEditModeUI() {
-        const toggle = document.getElementById('editModeToggle');
+        const toggle = $('#editModeToggle');
         if (toggle) toggle.checked = editModeEnabled;
-        const hint = document.getElementById('editModeHint');
+        const hint = $('#editModeHint');
         if (hint) {
-            hint.innerHTML = editModeEnabled
+            hint.textContent = editModeEnabled
                 ? 'Permite añadir y quitar criterios de las prácticas.'
                 : 'Criterios protegidos: solo lectura.';
         }
-        const headerHint = document.getElementById('headerHint');
+        const headerHint = $('#headerHint');
         if (headerHint) {
             headerHint.innerHTML = editModeEnabled
-                ? '<i class="fas fa-pen-to-square"></i> Modo edición activo: puedes añadir o quitar criterios.'
-                : '<i class="fas fa-lock"></i> Modo edición desactivado: los criterios están protegidos (solo lectura).';
+                ? '<i class="fas fa-pen-to-square" aria-hidden="true"></i> Modo edición activo: puedes añadir o quitar criterios.'
+                : '<i class="fas fa-lock" aria-hidden="true"></i> Modo edición desactivado: los criterios están protegidos (solo lectura).';
         }
     }
 
     function setEditMode(enabled, fromRemote = false) {
         editModeEnabled = enabled;
-        if (!fromRemote) lastLocalEditModeChange = Date.now(); // Marca de tiempo del cambio local
+        // FIX: marca de tiempo compensada con el reloj del servidor (evita descartar
+        // cambios legítimos cuando el reloj del dispositivo está desviado)
+        if (!fromRemote) lastLocalEditModeChange = serverNow();
         // Persistir el estado para mantenerlo entre sesiones
-        try { localStorage.setItem("editModeEnabled", enabled ? "true" : "false"); } catch (e) { /* localStorage no disponible */ }
+        try { localStorage.setItem(STORAGE_KEYS.editMode, enabled ? 'true' : 'false'); } catch (e) { /* almacenamiento no disponible */ }
         updateEditModeUI();
         renderPractices(); // Vuelve a pintar las tarjetas con o sin controles de edición
         // Sincronización automática con Firebase tras cada cambio
@@ -1015,233 +1355,517 @@
         }
     }
 
-    // --------------------------------------------------------------
-    // FUNCIONES DE RENDERIZADO
-    // --------------------------------------------------------------
+    // ==============================================================
+    // 8. RENDERIZADO
+    // ==============================================================
     function changeMode(mode) {
         currentMode = mode;
         currentCategory = 'all';
-        document.getElementById('mode-class-btn').classList.toggle('active', mode === 'class');
-        document.getElementById('mode-all-btn').classList.toggle('active', mode === 'all');
-        document.getElementById('categories-class').style.display = mode === 'class' ? 'block' : 'none';
-        document.getElementById('categories-all').style.display = mode === 'all' ? 'block' : 'none';
-        document.getElementById('viewTitle').innerText = mode === 'class' ? "Prácticas de 4º ESO" : "Banco de Recursos Completo";
-        document.getElementById('viewDesc').innerText = mode === 'class' 
-            ? "Programación prioritaria ordenada por la imagen de referencia." 
-            : "Listado completo de todas las prácticas.";
+        const isClass = mode === 'class';
+        const classBtn = $('#mode-class-btn');
+        const allBtn = $('#mode-all-btn');
+        classBtn.classList.toggle('active', isClass);
+        classBtn.setAttribute('aria-pressed', String(isClass));
+        allBtn.classList.toggle('active', !isClass);
+        allBtn.setAttribute('aria-pressed', String(!isClass));
+        $('#categories-class').style.display = isClass ? 'block' : 'none';
+        $('#categories-all').style.display = isClass ? 'none' : 'block';
+        $('#viewTitle').textContent = isClass ? 'Prácticas de 4º ESO' : 'Banco de Recursos Completo';
+        $('#viewDesc').textContent = isClass
+            ? 'Programación prioritaria ordenada por la imagen de referencia.'
+            : 'Listado completo de todas las prácticas.';
         renderCategories();
         renderPractices();
     }
 
     function renderCategories() {
-        const containerId = currentMode === 'class' ? 'categories-class' : 'categories-all';
-        const container = document.getElementById(containerId);
+        const container = $('#' + (currentMode === 'class' ? 'categories-class' : 'categories-all'));
         container.innerHTML = '';
+
         const allLink = document.createElement('a');
-        allLink.className = `cat-link ${currentCategory === 'all' ? 'active' : ''}`;
-        allLink.innerHTML = "◈ Ver todas";
-        allLink.href = "#";
-        allLink.onclick = (e) => { e.preventDefault(); currentCategory = 'all'; renderCategories(); renderPractices(); };
+        allLink.className = 'cat-link' + (currentCategory === 'all' ? ' active' : '');
+        allLink.innerHTML = '◈ Ver todas';
+        allLink.href = '#';
+        allLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            currentCategory = 'all';
+            renderCategories();
+            renderPractices();
+        });
         container.appendChild(allLink);
 
         const usedCats = new Set();
-        practicesData.forEach(p => {
+        practicesData.forEach((p) => {
             if (currentMode === 'all' || classPracticesIds.includes(p.id)) usedCats.add(p.category);
         });
-        Object.keys(categoriesMap).forEach(catId => {
-            if (usedCats.has(catId)) {
-                const link = document.createElement('a');
-                link.className = `cat-link ${currentCategory === catId ? 'active' : ''}`;
-                link.innerHTML = categoriesMap[catId];
-                link.href = "#";
-                link.onclick = (e) => { e.preventDefault(); currentCategory = catId; renderCategories(); renderPractices(); };
-                container.appendChild(link);
-            }
+        Object.keys(categoriesMap).forEach((catId) => {
+            if (!usedCats.has(catId)) return;
+            const link = document.createElement('a');
+            link.className = 'cat-link' + (currentCategory === catId ? ' active' : '');
+            link.innerHTML = categoriesMap[catId];
+            link.href = '#';
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                currentCategory = catId;
+                renderCategories();
+                renderPractices();
+            });
+            container.appendChild(link);
         });
     }
 
+    // Oculta cualquier popover visible (al salir de la zona de criterios)
+    function hideAllPopovers() {
+        $$('.popover.show').forEach((pop) => pop.classList.remove('show'));
+    }
+
     function renderPractices() {
-        const grid = document.getElementById('cardsGrid');
-        const search = document.getElementById('searchBox').value.toLowerCase();
-        grid.innerHTML = '';
+        const grid = $('#cardsGrid');
+        const search = ($('#searchBox').value || '').trim().toLowerCase();
 
-        let source = [];
-        if (currentMode === 'class') {
-            source = classPracticesIds.map(id => practicesData.find(p => p.id === id)).filter(p => p);
-        } else {
-            source = [...practicesData];
+        // FIX: destruir los popovers ANTES de vaciar el grid y eliminar los
+        // huérfanos del body (antes podían quedarse "fantasmas" al re-renderizar)
+        if (window.bootstrap) {
+            $$('#cardsGrid [data-bs-toggle="popover"]').forEach((el) => {
+                const instance = bootstrap.Popover.getInstance(el);
+                if (instance) instance.dispose();
+            });
         }
+        $$('.popover').forEach((pop) => pop.remove());
 
-        const filtered = source.filter(p => {
+        const source = currentMode === 'class'
+            ? classPracticesIds.map((id) => practicesById[id]).filter(Boolean)
+            : practicesData.slice();
+
+        const filtered = source.filter((p) => {
             const matchesCat = (currentCategory === 'all') || (p.category === currentCategory);
-            const matchesSearch = p.title.toLowerCase().includes(search) || p.id.toLowerCase().includes(search);
+            const matchesSearch = !search || p.title.toLowerCase().includes(search) || p.id.toLowerCase().includes(search);
             return matchesCat && matchesSearch;
         });
 
-        document.getElementById('counter').innerText = `${filtered.length} recursos mostrados`;
+        $('#counter').textContent = filtered.length + ' recursos mostrados';
+        $('#emptyState').classList.toggle('d-none', filtered.length !== 0);
 
-        filtered.forEach(p => {
+        const fragment = document.createDocumentFragment();
+        filtered.forEach((p) => {
             const practiceCrit = getPracticeCriteria(p);
             // Determinar qué criterios de los 13 NO están asignados
-            const missingCriteria = ALL_CRITERIA_CODES.filter(c => !practiceCrit.includes(c));
+            const missingCriteria = ALL_CRITERIA_CODES.filter((c) => practiceCrit.indexOf(c) === -1);
             // El botón de añadir solo aparece si el modo edición está activo
             const showAddButton = editModeEnabled && missingCriteria.length > 0;
 
             const cardCol = document.createElement('div');
             cardCol.className = 'col';
             cardCol.innerHTML = `
-                <div class="card h-100 practice-card cat-${p.category}">
+                <div class="card h-100 practice-card cat-${escapeHtml(p.category)}">
                     <div class="card-body p-4 d-flex flex-column">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="badge badge-id rounded px-2 py-1">${p.id}</span>
-                            <span class="cat-label">${categoriesMap[p.category] || p.category}</span>
+                            <span class="badge badge-id rounded px-2 py-1">${escapeHtml(p.id)}</span>
+                            <span class="cat-label">${escapeHtml(categoriesMap[p.category] || p.category)}</span>
                         </div>
-                        <h5 class="card-title fw-bold text-dark mb-3">${p.title}</h5>
-                        <div class="mb-3 d-flex flex-wrap align-items-center gap-1" id="criteria-container-${p.id}">
-                            ${practiceCrit.map(c => {
+                        <h5 class="card-title fw-bold text-dark mb-3">${escapeHtml(p.title)}</h5>
+                        <div class="mb-3 d-flex flex-wrap align-items-center gap-1">
+                            ${practiceCrit.map((c) => {
+                                const desc = criteriaDescriptions[c] || 'Descripción no disponible.';
                                 // La X de eliminar solo se muestra con el modo edición activo
-                                const removeBtn = editModeEnabled ? `<span class="remove-criterion" data-practice="${p.id}" data-criterion="${c}">❌</span>` : '';
-                                return `<span class="badge criterion-tag rounded-pill px-2 py-1" data-bs-toggle="popover" data-bs-trigger="hover" title="${c}" data-bs-content="${criteriaDescriptions[c] || 'Descripción no disponible.'}">
-                                            ${c} ${removeBtn}
-                                        </span>`;
+                                const removeBtn = editModeEnabled
+                                    ? `<button type="button" class="remove-criterion" data-practice="${escapeHtml(p.id)}" data-criterion="${escapeHtml(c)}" aria-label="Quitar el criterio ${escapeHtml(c)} de esta práctica"><i class="fas fa-times" aria-hidden="true"></i></button>`
+                                    : '';
+                                return `<span class="badge criterion-tag rounded-pill px-2 py-1" data-bs-toggle="popover" data-bs-trigger="hover" title="${escapeHtml(c)}" data-bs-content="${escapeHtml(desc)}">${escapeHtml(c)} ${removeBtn}</span>`;
                             }).join('')}
-                            ${showAddButton ? `<button class="btn btn-sm btn-outline-success btn-add-criteria ms-1" data-practice-id="${p.id}" title="Añadir criterios extra"><i class="fas fa-plus"></i> Criterio(s)</button>` : ''}
+                            ${showAddButton ? `<button type="button" class="btn btn-sm btn-outline-success btn-add-criteria ms-1" data-practice-id="${escapeHtml(p.id)}" title="Añadir criterios extra"><i class="fas fa-plus" aria-hidden="true"></i> Criterio(s)</button>` : ''}
                         </div>
                         <div class="mt-auto">
-                            <a href="${p.url}" class="btn btn-outline-primary w-100 rounded-pill py-2 fw-bold" onclick="event.preventDefault(); window.location.href=this.href;">
-                                Ver Práctica <i class="fas fa-external-link-alt ms-1"></i>
+                            <a href="${escapeHtml(p.url)}" target="_blank" rel="noopener" class="btn btn-outline-primary w-100 rounded-pill py-2 fw-bold">
+                                Ver Práctica <i class="fas fa-external-link-alt ms-1" aria-hidden="true"></i>
                             </a>
                         </div>
                     </div>
                 </div>
             `;
-            grid.appendChild(cardCol);
+            fragment.appendChild(cardCol);
         });
-
-        // Destruir popovers anteriores para evitar acumulación y persistencia
-        document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
-            const existing = bootstrap.Popover.getInstance(el);
-            if (existing) existing.dispose();
-        });
+        grid.innerHTML = '';
+        grid.appendChild(fragment);
 
         // Inicializar popovers (hover) con retardo mínimo para ocultar rápido
-        const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
-        popoverTriggerList.map(el => new bootstrap.Popover(el, {
-            trigger: 'hover',
-            placement: 'top',
-            html: false,
-            delay: { show: 250, hide: 80 }
-        }));
-
-        // Ocultar cualquier popover visible al salir de los criterios
-        document.querySelectorAll('[id^="criteria-container-"]').forEach(el => {
-            el.addEventListener('mouseleave', () => {
-                document.querySelectorAll('.popover.show').forEach(pop => {
-                    pop.classList.remove('show');
+        if (window.bootstrap) {
+            $$('[data-bs-toggle="popover"]').forEach((el) => {
+                new bootstrap.Popover(el, {
+                    trigger: 'hover',
+                    placement: 'top',
+                    html: false,
+                    delay: { show: 250, hide: 80 }
                 });
             });
-        });
-
-        // Eventos para botones "Añadir criterio(s)"
-        document.querySelectorAll('.btn-add-criteria').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const practiceId = btn.getAttribute('data-practice-id');
-                currentPracticeIdForModal = practiceId;
-                const practice = practicesData.find(p => p.id === practiceId);
-                if (!practice) return;
-                const currentCrit = getPracticeCriteria(practice);
-                const available = ALL_CRITERIA_CODES.filter(c => !currentCrit.includes(c));
-                const checklistDiv = document.getElementById('criteriaChecklist');
-                checklistDiv.innerHTML = '';
-                if (available.length === 0) {
-                    checklistDiv.innerHTML = '<p class="text-muted">No hay criterios disponibles para añadir (ya están todos).</p>';
-                } else {
-                    available.forEach(code => {
-                        const desc = criteriaDescriptions[code];
-                        const div = document.createElement('div');
-                        div.className = 'form-check mb-3';
-                        div.innerHTML = `
-                            <input class="form-check-input" type="checkbox" value="${code}" id="chk_${code}">
-                            <label class="form-check-label" for="chk_${code}" style="white-space:normal; word-break:break-word; overflow-wrap:break-word;">
-                                <strong>${code}</strong><br><small class="text-muted" style="white-space:normal;">${desc}</small>
-                            </label>
-                        `;
-                        checklistDiv.appendChild(div);
-                    });
-                }
-                new bootstrap.Modal(document.getElementById('addCriteriaModal')).show();
-            });
-        });
-
-        // Eventos para eliminar criterios adicionales (delegación)
-        document.querySelectorAll('.remove-criterion').forEach(el => {
-            el.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const practiceId = el.getAttribute('data-practice');
-                const criterion = el.getAttribute('data-criterion');
-                if (confirm(`¿Eliminar el criterio ${criterion} de esta práctica?`)) {
-                    removeCriterionFromPractice(practiceId, criterion);
-                }
-            });
-        });
+        }
     }
 
-    // --------------------------------------------------------------
-    // INICIALIZACIÓN Y EVENTOS
-    // --------------------------------------------------------------
-    window.onload = () => {
+    // Abre el modal de criterios para una práctica
+    function openCriteriaModal(practiceId) {
+        const practice = practicesById[practiceId];
+        if (!practice) return;
+        if (!window.bootstrap) return; // sin Bootstrap no hay modal (p. ej. sin conexión en la 1ª visita)
+        currentPracticeIdForModal = practiceId;
+        const currentCrit = getPracticeCriteria(practice);
+        const available = ALL_CRITERIA_CODES.filter((c) => !currentCrit.includes(c));
+        const checklist = $('#criteriaChecklist');
+        if (available.length === 0) {
+            checklist.innerHTML = '<p class="text-muted mb-0">No hay criterios disponibles para añadir (ya están todos).</p>';
+        } else {
+            checklist.innerHTML = available.map((code) => `
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" value="${escapeHtml(code)}" id="chk_${escapeHtml(code)}">
+                    <label class="form-check-label" for="chk_${escapeHtml(code)}">
+                        <strong>${escapeHtml(code)}</strong><br><small class="text-muted">${escapeHtml(criteriaDescriptions[code] || '')}</small>
+                    </label>
+                </div>
+            `).join('');
+        }
+        // FIX: getOrCreateInstance evita acumular instancias del modal
+        bootstrap.Modal.getOrCreateInstance($('#addCriteriaModal')).show();
+    }
+
+    // Confirma la selección del modal de criterios
+    function confirmAddCriteria() {
+        if (currentPracticeIdForModal) {
+            const selected = $$('#criteriaChecklist input[type="checkbox"]:checked').map((cb) => cb.value);
+            if (selected.length === 0) {
+                window.alert('No has seleccionado ningún criterio.');
+                return; // FIX: no cerrar el modal si no se eligió nada
+            }
+            addCriteriaToPractice(currentPracticeIdForModal, selected);
+        }
+        if (window.bootstrap) {
+            bootstrap.Modal.getOrCreateInstance($('#addCriteriaModal')).hide();
+        }
+    }
+
+    // Delegación de eventos del grid: un solo listener para todos los botones
+    function onGridClick(event) {
+        const addBtn = event.target.closest('.btn-add-criteria');
+        if (addBtn) {
+            openCriteriaModal(addBtn.getAttribute('data-practice-id'));
+            return;
+        }
+        const removeBtn = event.target.closest('.remove-criterion');
+        if (removeBtn) {
+            const practiceId = removeBtn.getAttribute('data-practice');
+            const criterion = removeBtn.getAttribute('data-criterion');
+            if (window.confirm(`¿Eliminar el criterio ${criterion} de esta práctica?`)) {
+                removeCriterionFromPractice(practiceId, criterion);
+            }
+        }
+    }
+
+    // ==============================================================
+    // 9. MENÚ LATERAL RESPONSIVE (cajón deslizante en móvil/tablet)
+    // ==============================================================
+    const Sidebar = {
+        btnOpen: null,
+        btnClose: null,
+
+        init() {
+            this.btnOpen = $('#btnOpenSidebar');
+            this.btnClose = $('#btnCloseSidebar');
+
+            this.btnOpen.addEventListener('click', () => this.open());
+            this.btnClose.addEventListener('click', () => this.close());
+            $('#sidebarBackdrop').addEventListener('click', () => this.close());
+
+            // Tecla Escape cierra el menú
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && this.isOpen()) this.close();
+            });
+
+            // Al navegar desde el menú, cerrarlo en pantallas pequeñas
+            $('#navigation-modes').addEventListener('click', (event) => {
+                if (event.target.closest('.btn-mode') || event.target.closest('.cat-link')) this.close();
+            });
+
+            // Al pasar a escritorio, asegurar que el menú queda en su sitio
+            const mqDesktop = window.matchMedia('(min-width: 992px)');
+            const onChange = () => { if (mqDesktop.matches) this.close(); };
+            if (typeof mqDesktop.addEventListener === 'function') mqDesktop.addEventListener('change', onChange);
+            else if (typeof mqDesktop.addListener === 'function') mqDesktop.addListener(onChange);
+        },
+
+        isOpen() { return document.body.classList.contains('sidebar-open'); },
+
+        open() {
+            document.body.classList.add('sidebar-open');
+            this.btnOpen.setAttribute('aria-expanded', 'true');
+            this.btnClose.focus(); // accesibilidad: foco dentro del menú abierto
+        },
+
+        close() {
+            if (!this.isOpen()) return;
+            document.body.classList.remove('sidebar-open');
+            this.btnOpen.setAttribute('aria-expanded', 'false');
+            if (window.innerWidth < 992) this.btnOpen.focus(); // devolver el foco
+        }
+    };
+
+    // Reubica el indicador de Firebase según el tamaño de pantalla:
+    // - Escritorio: arriba a la derecha del contenido
+    // - Móvil/tablet: dentro de la barra superior (siempre visible)
+    function placeFirebaseBar() {
+        const bar = $('#firebaseStatusBar');
+        const desktopTarget = $('.main-content');
+        const topbarTarget = $('.app-topbar');
+        if (!bar || !desktopTarget || !topbarTarget) return;
+        if (window.matchMedia('(min-width: 992px)').matches) {
+            if (bar.parentElement !== desktopTarget) desktopTarget.insertBefore(bar, desktopTarget.firstChild);
+        } else if (bar.parentElement !== topbarTarget) {
+            topbarTarget.appendChild(bar);
+        }
+    }
+
+    // ==============================================================
+    // 10. AVISOS (toast)
+    // ==============================================================
+    const AppToast = {
+        el: null,
+        msgEl: null,
+        actionBtn: null,
+        timer: null,
+        onAction: null,
+
+        init() {
+            this.el = $('#appToast');
+            this.msgEl = $('#appToastMsg');
+            this.actionBtn = $('#appToastAction');
+            $('#appToastClose').addEventListener('click', () => this.hide());
+            this.actionBtn.addEventListener('click', () => {
+                const fn = this.onAction;
+                this.hide();
+                if (fn) fn();
+            });
+        },
+
+        show(message, opts = {}) {
+            this.msgEl.textContent = message;
+            this.onAction = opts.onAction || null;
+            this.actionBtn.classList.toggle('d-none', !opts.label);
+            if (opts.label) this.actionBtn.textContent = opts.label;
+            this.el.classList.add('show');
+            window.clearTimeout(this.timer);
+            this.timer = window.setTimeout(() => this.hide(), opts.duration || (opts.label ? 12000 : 5000));
+        },
+
+        hide() {
+            window.clearTimeout(this.timer);
+            this.el.classList.remove('show');
+        }
+    };
+
+    // ==============================================================
+    // 11. PWA: INSTALACIÓN (botón en el menú lateral)
+    // ==============================================================
+    const PWAInstall = {
+        init() {
+            const section = $('#installSection');
+            const btn = $('#btnInstall');
+            const iosHint = $('#installHintIos');
+            let deferredPrompt = null;
+
+            window.addEventListener('beforeinstallprompt', (event) => {
+                event.preventDefault();
+                deferredPrompt = event;
+                section.classList.remove('d-none');
+                btn.classList.remove('d-none');
+            });
+
+            btn.addEventListener('click', async () => {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt();
+                try { await deferredPrompt.userChoice; } catch (e) { /* ignorar */ }
+                deferredPrompt = null;
+                btn.classList.add('d-none');
+                section.classList.add('d-none');
+            });
+
+            window.addEventListener('appinstalled', () => {
+                deferredPrompt = null;
+                btn.classList.add('d-none');
+                section.classList.add('d-none');
+                AppToast.show('Aplicación instalada en tu dispositivo');
+            });
+
+            // iOS no dispara beforeinstallprompt: mostrar sugerencia manual
+            const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
+                || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                || window.navigator.standalone === true;
+            if (isIOS && !isStandalone) {
+                section.classList.remove('d-none');
+                iosHint.classList.remove('d-none');
+            }
+        }
+    };
+
+    // ==============================================================
+    // 12. PWA: VERSIÓN DINÁMICA EXTRAÍDA DEL SERVICE WORKER
+    // ==============================================================
+    // El sw.js define la versión en CACHE_NAME ('arduinoblocks-vX.Y').
+    // La página se la pide al SW activo (postMessage + MessageChannel),
+    // con un plan B que lee y parsea el propio fichero sw.js.
+    const VersionChip = {
+        el: null,
+        resolved: false,
+
+        init() {
+            this.el = $('#versionChip');
+            if (!('serviceWorker' in navigator)) {
+                this.set('—');
+                this.el.setAttribute('title', 'Service Worker no disponible en este navegador');
+                return;
+            }
+            // Cuando un nuevo SW tome el control, refrescar la versión mostrada
+            navigator.serviceWorker.addEventListener('controllerchange', () => this.refresh());
+            this.refresh();
+            this.registerServiceWorker();
+        },
+
+        registerServiceWorker() {
+            window.addEventListener('load', async () => {
+                try {
+                    const registration = await navigator.serviceWorker.register('./sw.js');
+                    console.log('Service Worker registrado:', registration.scope);
+
+                    // Avisar cuando haya una versión nueva lista (con botón de recarga)
+                    registration.addEventListener('updatefound', () => {
+                        const worker = registration.installing;
+                        if (!worker) return;
+                        worker.addEventListener('statechange', () => {
+                            if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+                                AppToast.show('Nueva versión disponible', {
+                                    label: 'Recargar',
+                                    onAction: () => window.location.reload()
+                                });
+                            }
+                        });
+                    });
+
+                    // Comprobar actualizaciones cada hora (apps abiertas mucho tiempo)
+                    window.setInterval(() => registration.update().catch(() => {}), 60 * 60 * 1000);
+                } catch (err) {
+                    console.warn('Service Worker no registrado:', err.message);
+                    this.fallback();
+                }
+            });
+        },
+
+        refresh() {
+            this.resolved = false;
+            const sw = ('serviceWorker' in navigator) ? navigator.serviceWorker.controller : null;
+            if (sw) {
+                const channel = new MessageChannel();
+                channel.port1.onmessage = (event) => {
+                    if (event.data && event.data.type === 'VERSION' && !this.resolved) {
+                        this.resolved = true;
+                        this.set(event.data.version);
+                    }
+                };
+                try {
+                    sw.postMessage({ type: 'GET_VERSION' }, [channel.port2]);
+                } catch (e) {
+                    this.fallback();
+                    return;
+                }
+                // Plan B si el SW activo no responde (versiones antiguas sin handler)
+                window.setTimeout(() => { if (!this.resolved) this.fallback(); }, 800);
+            } else {
+                this.fallback();
+            }
+        },
+
+        async fallback() {
+            if (this.resolved) return;
+            let version = null;
+            try {
+                const response = await fetch('./sw.js', { cache: 'no-store' });
+                const text = await response.text();
+                const match = text.match(/CACHE_NAME\s*=\s*['"]arduinoblocks-v([^'"]+)['"]/);
+                if (match) version = match[1];
+            } catch (e) {
+                // sin conexión: se queda el estado actual
+            }
+            this.set(version || '?');
+        },
+
+        set(version) {
+            if (!this.el) return;
+            this.el.innerHTML = '<span class="chip-dot" aria-hidden="true"></span>v' + escapeHtml(String(version));
+            this.el.setAttribute('title', 'Versión de la aplicación: v' + version + ' (según la caché del Service Worker)');
+        }
+    };
+
+    // ==============================================================
+    // 13. INICIALIZACIÓN
+    // ==============================================================
+    function init() {
+        // 1) Datos locales
         loadStorage();
 
-        // Restaurar el estado del modo edición (interruptor) antes del primer renderizado
+        // 2) Restaurar el estado del modo edición antes del primer renderizado
         let savedEditMode = null;
-        try { savedEditMode = localStorage.getItem("editModeEnabled"); } catch (e) { /* localStorage no disponible */ }
-        editModeEnabled = (savedEditMode === null) ? true : (savedEditMode === "true");
+        try { savedEditMode = localStorage.getItem(STORAGE_KEYS.editMode); } catch (e) { /* almacenamiento no disponible */ }
+        editModeEnabled = (savedEditMode === null) ? true : (savedEditMode === 'true');
         updateEditModeUI();
 
+        // 3) Primera renderización
         changeMode('class');
         window.__appInitialized = true;
 
-        // Interruptor deslizante del modo edición
-        document.getElementById('editModeToggle').addEventListener('change', (e) => {
-            setEditMode(e.target.checked);
-        });
+        // 4) Módulos de interfaz
+        AppToast.init();
+        Sidebar.init();
+        PWAInstall.init();
+        placeFirebaseBar();
+        const mqDesktop = window.matchMedia('(min-width: 992px)');
+        const onBreakpointChange = () => placeFirebaseBar();
+        if (typeof mqDesktop.addEventListener === 'function') mqDesktop.addEventListener('change', onBreakpointChange);
+        else if (typeof mqDesktop.addListener === 'function') mqDesktop.addListener(onBreakpointChange);
 
-        // Confirmar añadir criterios desde el modal
-        document.getElementById('confirmAddCriteria').addEventListener('click', () => {
-            if (currentPracticeIdForModal) {
-                const selected = [];
-                document.querySelectorAll('#criteriaChecklist input[type="checkbox"]:checked').forEach(cb => {
-                    selected.push(cb.value);
-                });
-                if (selected.length > 0) {
-                    addCriteriaToPractice(currentPracticeIdForModal, selected);
-                } else {
-                    alert("No has seleccionado ningún criterio.");
-                }
+        // 5) Eventos (delegados, se registran una sola vez)
+        $('#navigation-modes').addEventListener('click', (event) => {
+            const btn = event.target.closest('.btn-mode[data-mode]');
+            if (btn) changeMode(btn.getAttribute('data-mode'));
+        });
+        $('#editModeToggle').addEventListener('change', (event) => setEditMode(event.target.checked));
+        $('#confirmAddCriteria').addEventListener('click', confirmAddCriteria);
+
+        const searchBox = $('#searchBox');
+        searchBox.addEventListener('input', debounce(() => {
+            // En pantallas pequeñas, cerrar el menú para dejar ver los resultados
+            if (window.innerWidth < 992) Sidebar.close();
+            renderPractices();
+        }, 150));
+        searchBox.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') { // limpiar la búsqueda rápidamente
+                searchBox.value = '';
+                renderPractices();
             }
-            bootstrap.Modal.getInstance(document.getElementById('addCriteriaModal')).hide();
         });
 
-        // Buscador
-        document.getElementById('searchBox').addEventListener('input', renderPractices);
+        const grid = $('#cardsGrid');
+        grid.addEventListener('click', onGridClick);
+        grid.addEventListener('mouseleave', hideAllPopovers);
 
-        // Conectar Firebase en segundo plano (no bloquea la carga)
+        // 6) Sincronización en segundo plano + versión de la app
         connectFirebaseSync();
-    };
-</script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-    // Registro del Service Worker para PWA
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js').then((reg) => {
-                console.log('Service Worker registrado:', reg.scope);
-            }).catch((err) => {
-                console.warn('Service Worker no registrado:', err.message);
-            });
-        });
+        VersionChip.init();
     }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+
+
 </script>
 </body>
 </html>
